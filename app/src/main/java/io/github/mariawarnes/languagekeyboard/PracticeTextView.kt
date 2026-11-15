@@ -34,7 +34,7 @@ class PracticeTextView @JvmOverloads constructor(
         }
 
     var cursorColor: Int = 0
-    var highlightColor: Int = 0
+    var markHighlightColor: Int = 0
 
     private val density = resources.displayMetrics.density
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -63,7 +63,7 @@ class PracticeTextView @JvmOverloads constructor(
         // Behind the text: highlight the selected mistake.
         for (m in marks) {
             if (!m.highlighted) continue
-            fillPaint.color = highlightColor
+            fillPaint.color = markHighlightColor
             canvas.drawRect(dx + x(layout, m.start), lineTop, dx + x(layout, m.end), lineBottom, fillPaint)
         }
 

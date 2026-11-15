@@ -728,7 +728,7 @@ class LanguageKeyboardService : InputMethodService(),
             }
             val marks = visibleMarks()
             tv.cursorColor = ContextCompat.getColor(this, R.color.brand)
-            tv.highlightColor = ContextCompat.getColor(this, R.color.mark_selected)
+            tv.markHighlightColor = ContextCompat.getColor(this, R.color.mark_selected)
             if (active && buffer.isNotEmpty()) {
                 val text = SpannableStringBuilder(buffer)
                 tv.cursorOffset = cursor
