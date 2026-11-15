@@ -35,7 +35,7 @@ class KeyboardView @JvmOverloads constructor(
 
     var listener: Listener? = null
 
-    var rows: List<List<Key>> = KeyboardLayouts.LETTERS
+    var rows: List<List<Key>> = KeyboardLayouts.forMode(KeyboardMode.LETTERS, "en")
         set(value) {
             if (field === value) return
             field = value
