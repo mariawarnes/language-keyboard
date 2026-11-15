@@ -2,6 +2,7 @@ package io.github.mariawarnes.languagekeyboard
 
 import android.content.Intent
 import android.content.SharedPreferences
+import android.annotation.SuppressLint
 import android.graphics.Typeface
 import android.inputmethodservice.InputMethodService
 import android.os.Handler
@@ -9,17 +10,23 @@ import android.os.Looper
 import android.text.InputType
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
+import android.text.style.UnderlineSpan
 import android.util.Log
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.HorizontalScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import java.util.Locale
+import java.util.concurrent.Executors
+import kotlin.math.abs
 
 /**
  * The keyboard.
@@ -45,6 +52,9 @@ class LanguageKeyboardService : InputMethodService(),
 
     /** Text in the language you're practising, not yet locked in. */
     private val buffer = StringBuilder()
+
+    /** Where in [buffer] typing goes (slide on the space bar, or tap the practice bar, to move it). */
+    private var cursor = 0
 
     /** Bumped whenever the current phrase is finished or abandoned, so late results are ignored. */
     private var session = 0
@@ -106,6 +116,41 @@ class LanguageKeyboardService : InputMethodService(),
     private enum class SlotKind { VERBATIM, WORD, GESTURE, INFO }
     private class Slot(val text: String, val kind: SlotKind, val emphasised: Boolean = false)
 
+    // --- Checking the practice text ---------------------------------------------------------
+
+    private enum class MarkKind { SPELLING, ACCENT, GRAMMAR }
+
+    /** A possible mistake in [buffer] between [start] and [end] (which held [original]). */
+    private class Mark(
+        val start: Int, val end: Int, val original: String,
+        val kind: MarkKind, val message: String?, val replacements: List<String>,
+    ) {
+        fun sameAs(other: Mark) = start == other.start && end == other.end && original == other.original
+        fun shiftedBy(delta: Int) = Mark(start + delta, end + delta, original, kind, message, replacements)
+    }
+
+    private var practiceScroll: HorizontalScrollView? = null
+    private var marksBadge: TextView? = null
+    private var correctionPanel: View? = null
+    private var correctionMessage: TextView? = null
+    private val correctionFixes = arrayOfNulls<TextView>(2)
+
+    private var markMistakes = true
+    private var grammarCheck = false
+    private var wordMarks: List<Mark> = emptyList()
+    private var grammarMarks: List<Mark> = emptyList()
+    private var selectedMark: Mark? = null
+    private var markRequest = 0
+    private var grammarRequest = 0
+    private var lastGrammarText = ""
+    private var warnedBeforeLockIn = false
+    private val grammarExecutor = Executors.newSingleThreadExecutor()
+    private val grammarRunnable = Runnable { runGrammarCheck() }
+
+    // Only touched on Dictionaries.worker.
+    private val markCache = HashMap<String, SuggestionResult>()
+    private var markCacheDictionary: Dictionary? = null
+
     // --- Keyboard state ---------------------------------------------------------------------
 
     private var mode = KeyboardMode.LETTERS
@@ -147,6 +192,7 @@ class LanguageKeyboardService : InputMethodService(),
     override fun onDestroy() {
         Prefs.get(this).unregisterOnSharedPreferenceChangeListener(this)
         engine.close()
+        grammarExecutor.shutdown()
         super.onDestroy()
     }
 
@@ -161,6 +207,17 @@ class LanguageKeyboardService : InputMethodService(),
         root.findViewById<View>(R.id.clear_button).setOnClickListener { clearPhrase() }
         root.findViewById<View>(R.id.settings_button).setOnClickListener { openSettings() }
         suggestionBar = root.findViewById(R.id.suggestions)
+        practiceScroll = root.findViewById(R.id.practice_scroll)
+        marksBadge = root.findViewById<TextView>(R.id.marks_badge).also { it.setOnClickListener { selectNextMark() } }
+        correctionPanel = root.findViewById(R.id.correction_panel)
+        correctionMessage = root.findViewById(R.id.correction_message)
+        correctionFixes[0] = root.findViewById(R.id.correction_fix_1)
+        correctionFixes[1] = root.findViewById(R.id.correction_fix_2)
+        root.findViewById<View>(R.id.correction_close).setOnClickListener {
+            selectedMark = null
+            refreshUi()
+        }
+        typedText?.setOnTouchListener(::onPracticeTouch)
         suggestionViews[0] = root.findViewById(R.id.suggestion_left)
         suggestionViews[1] = root.findViewById(R.id.suggestion_center)
         suggestionViews[2] = root.findViewById(R.id.suggestion_right)
@@ -231,6 +288,11 @@ class LanguageKeyboardService : InputMethodService(),
                 readTypingOptions()
                 requestedDictionary = null
             }
+            Prefs.KEY_MARK_MISTAKES, Prefs.KEY_GRAMMAR_CHECK -> {
+                readTypingOptions()
+                lastGrammarText = ""
+                scheduleChecks()
+            }
         }
         refreshUi()
     }
@@ -239,6 +301,8 @@ class LanguageKeyboardService : InputMethodService(),
         suggestionsEnabled = Prefs.suggestions(this)
         autocorrectEnabled = Prefs.autocorrect(this)
         gestureEnabled = Prefs.gestureTyping(this)
+        markMistakes = Prefs.markMistakes(this)
+        grammarCheck = Prefs.grammarCheck(this)
     }
 
     private fun configureEngine() {
@@ -276,7 +340,7 @@ class LanguageKeyboardService : InputMethodService(),
 
     /** Text before the cursor that typing aids work on: the practice text, or the field's own text. */
     private fun textBefore(): String =
-        if (translationActive) buffer.toString()
+        if (translationActive) buffer.substring(0, cursor)
         else currentInputConnection?.getTextBeforeCursor(64, 0)?.toString().orEmpty()
 
     private fun isWordChar(c: Char) =
@@ -288,7 +352,8 @@ class LanguageKeyboardService : InputMethodService(),
 
     private fun insert(text: String) {
         if (translationActive) {
-            buffer.append(text)
+            buffer.insert(cursor, text)
+            cursor += text.length
             onBufferChanged()
         } else {
             currentInputConnection?.commitText(text, 1)
@@ -298,8 +363,9 @@ class LanguageKeyboardService : InputMethodService(),
     /** Replace the last [count] characters before the cursor with [text]. */
     private fun replaceBefore(count: Int, text: String) {
         if (translationActive) {
-            buffer.setLength(maxOf(0, buffer.length - count))
-            buffer.append(text)
+            val start = maxOf(0, cursor - count)
+            buffer.replace(start, cursor, text)
+            cursor = start + text.length
             onBufferChanged()
         } else {
             val ic = currentInputConnection ?: return
@@ -353,9 +419,12 @@ class LanguageKeyboardService : InputMethodService(),
             // Backspace straight after a swipe removes the whole word.
             replaceBefore(swiped.length, "")
         } else if (translationActive && buffer.isNotEmpty()) {
-            val cut = buffer.offsetByCodePoints(buffer.length, -1)
-            buffer.setLength(cut)
-            onBufferChanged()
+            if (cursor > 0) {
+                val cut = buffer.offsetByCodePoints(cursor, -1)
+                buffer.delete(cut, cursor)
+                cursor = cut
+                onBufferChanged()
+            }
         } else {
             sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
         }
@@ -365,6 +434,15 @@ class LanguageKeyboardService : InputMethodService(),
 
     private fun onEnter() {
         if (translationActive && buffer.isNotEmpty()) {
+            val marks = visibleMarks()
+            if (marks.isNotEmpty() && !warnedBeforeLockIn) {
+                // Give a chance to fix marked mistakes first; pressing ✓ again sends anyway.
+                warnedBeforeLockIn = true
+                selectedMark = marks.first()
+                statusMessage = getString(R.string.marks_before_send)
+                refreshUi()
+                return
+            }
             requestLockIn()
             return
         }
@@ -413,8 +491,9 @@ class LanguageKeyboardService : InputMethodService(),
         val cap = when {
             info == null || !capsRequested -> false
             translationActive && buffer.isNotEmpty() -> {
-                val trimmed = buffer.trimEnd()
-                buffer.last() == ' ' && trimmed.isNotEmpty() && trimmed.last() in ".?!"
+                val before = textBefore()
+                val trimmed = before.trimEnd()
+                before.isNotEmpty() && before.last() == ' ' && trimmed.isNotEmpty() && trimmed.last() in ".?!"
             }
             else -> (currentInputConnection?.getCursorCapsMode(info.inputType) ?: 0) != 0
         }
@@ -427,6 +506,9 @@ class LanguageKeyboardService : InputMethodService(),
     private fun onBufferChanged() {
         generation++
         statusMessage = null
+        warnedBeforeLockIn = false
+        cursor = cursor.coerceIn(0, buffer.length)
+        scheduleChecks()
         if (buffer.isEmpty()) {
             engine.cancelPending()
             appliedGeneration = generation
@@ -534,6 +616,15 @@ class LanguageKeyboardService : InputMethodService(),
         engine.cancelPending()
         session++
         buffer.setLength(0)
+        cursor = 0
+        wordMarks = emptyList()
+        grammarMarks = emptyList()
+        selectedMark = null
+        lastGrammarText = ""
+        warnedBeforeLockIn = false
+        markRequest++
+        grammarRequest++
+        mainHandler.removeCallbacks(grammarRunnable)
         generation = 0
         appliedGeneration = 0
         composed = ""
@@ -638,9 +729,22 @@ class LanguageKeyboardService : InputMethodService(),
                 engine.state == TranslationEngine.State.DOWNLOAD_FAILED -> getString(R.string.strip_download_failed)
                 else -> statusMessage
             }
+            val marks = visibleMarks()
             if (active && buffer.isNotEmpty()) {
-                val text = SpannableStringBuilder(buffer).append("▏")
-                text.setSpan(ForegroundColorSpan(secondary), text.length - 1, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                val text = SpannableStringBuilder(buffer)
+                for (m in marks) {
+                    text.setSpan(ForegroundColorSpan(markColor(m.kind)), m.start, m.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    text.setSpan(UnderlineSpan(), m.start, m.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    if (selectedMark?.sameAs(m) == true) {
+                        text.setSpan(
+                            BackgroundColorSpan(ContextCompat.getColor(this, R.color.mark_selected)),
+                            m.start, m.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+                        )
+                    }
+                }
+                // The cursor; spans after it shift along automatically.
+                text.insert(cursor, "▏")
+                text.setSpan(ForegroundColorSpan(secondary), cursor, cursor + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 if (message != null) {
                     val start = text.length
                     text.append("  ").append(message)
@@ -648,12 +752,265 @@ class LanguageKeyboardService : InputMethodService(),
                 }
                 tv.text = text
                 tv.setTextColor(primary)
+                tv.post { scrollPracticeToCursor() }
             } else {
                 tv.text = message ?: getString(R.string.strip_hint, Languages.displayName(typing))
                 tv.setTextColor(secondary)
+                practiceScroll?.scrollTo(0, 0)
             }
         }
+
+        marksBadge?.let { badge ->
+            badge.visibility = if (marks().isNotEmpty()) View.VISIBLE else View.GONE
+            badge.text = getString(R.string.marks_badge, marks().size)
+        }
+        showCorrection()
         updateSuggestions()
+    }
+
+    private fun marks() = visibleMarks()
+
+    // --- Practice bar: cursor and marked mistakes -------------------------------------------
+
+    /** Keep the cursor in view, with some margin, as the text scrolls sideways. */
+    private fun scrollPracticeToCursor() {
+        val sv = practiceScroll ?: return
+        val layout = typedText?.layout ?: return
+        if (cursor > layout.text.length) return
+        val x = layout.getPrimaryHorizontal(cursor).toInt()
+        val margin = sv.width / 4
+        val target = when {
+            x < sv.scrollX + margin -> x - margin
+            x > sv.scrollX + sv.width - margin -> x - sv.width + margin
+            else -> return
+        }
+        sv.smoothScrollTo(maxOf(0, target), 0)
+    }
+
+    /** Slide on the space bar: move through the practice text, or the app's own text. */
+    override fun onCursorMove(steps: Int) {
+        gestureWords = null
+        undoAutocorrect = null
+        autoSpaced = false
+        if (translationActive && buffer.isNotEmpty()) {
+            var c = cursor
+            repeat(abs(steps)) {
+                c = if (steps < 0) {
+                    if (c > 0) buffer.offsetByCodePoints(c, -1) else 0
+                } else {
+                    if (c < buffer.length) buffer.offsetByCodePoints(c, 1) else buffer.length
+                }
+            }
+            if (c == cursor) return
+            cursor = c
+            lastResult = null
+            updateAutoShift()
+            refreshUi()
+        } else {
+            val key = if (steps < 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
+            repeat(abs(steps)) { sendDownUpKeyEvents(key) }
+        }
+    }
+
+    /** Tap the practice text to put the cursor there (and open a marked mistake). */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun onPracticeTouch(v: View, event: MotionEvent): Boolean {
+        if (event.action != MotionEvent.ACTION_UP || !translationActive || buffer.isEmpty()) return true
+        val tv = v as TextView
+        val layout = tv.layout ?: return true
+        var offset = layout.getOffsetForHorizontal(0, event.x - tv.totalPaddingLeft)
+        if (offset > cursor) offset -= 1 // skip over the cursor glyph
+        offset = offset.coerceIn(0, buffer.length)
+        selectedMark = visibleMarks().firstOrNull { offset in it.start..it.end }
+        cursor = selectedMark?.end ?: offset
+        gestureWords = null
+        undoAutocorrect = null
+        autoSpaced = false
+        lastResult = null
+        updateAutoShift()
+        refreshUi()
+        return true
+    }
+
+    private fun selectNextMark() {
+        val marks = visibleMarks()
+        if (marks.isEmpty()) return
+        val current = selectedMark
+        val index = if (current == null) 0 else (marks.indexOfFirst { it.sameAs(current) } + 1) % marks.size
+        selectedMark = marks[index]
+        cursor = marks[index].end
+        lastResult = null
+        refreshUi()
+    }
+
+    private fun markColor(kind: MarkKind) = ContextCompat.getColor(
+        this,
+        when (kind) {
+            MarkKind.SPELLING -> R.color.mark_spelling
+            MarkKind.ACCENT -> R.color.mark_accent
+            MarkKind.GRAMMAR -> R.color.mark_grammar
+        },
+    )
+
+    /** Marks that still match the text (edits elsewhere may have moved or removed them). */
+    private fun visibleMarks(): List<Mark> {
+        if (!translationActive || buffer.isEmpty()) return emptyList()
+        val text = buffer.toString()
+        fun valid(m: Mark) = m.start >= 0 && m.end <= text.length && text.substring(m.start, m.end) == m.original
+        val words = if (markMistakes) wordMarks.filter { valid(it) } else emptyList()
+        val grammar = if (grammarCheck) {
+            grammarMarks.filter { g -> valid(g) && words.none { w -> w.start < g.end && g.start < w.end } }
+        } else {
+            emptyList()
+        }
+        return (words + grammar).sortedBy { it.start }
+    }
+
+    /** After an edit: re-check words now, and grammar once typing pauses. */
+    private fun scheduleChecks() {
+        mainHandler.removeCallbacks(grammarRunnable)
+        if (!translationActive || buffer.isBlank()) return
+        val text = buffer.toString()
+        val dict = dictionary
+        if (markMistakes && dict != null) {
+            val request = ++markRequest
+            val cursorAt = cursor
+            val taught = userWords
+            Dictionaries.worker.execute {
+                val marks = findWordMarks(dict, text, cursorAt, taught)
+                mainHandler.post {
+                    if (request == markRequest) {
+                        wordMarks = marks
+                        refreshUi()
+                    }
+                }
+            }
+        }
+        if (grammarCheck && LanguageTool.isSupported(Prefs.typingLanguage(this))) {
+            mainHandler.postDelayed(grammarRunnable, GRAMMAR_DELAY_MS)
+        }
+    }
+
+    /** Runs on Dictionaries.worker. */
+    private fun findWordMarks(dict: Dictionary, text: String, cursorAt: Int, taught: Set<String>): List<Mark> {
+        if (markCacheDictionary !== dict) {
+            markCache.clear()
+            markCacheDictionary = dict
+        }
+        val marks = ArrayList<Mark>()
+        for (match in WORD.findAll(text)) {
+            val start = match.range.first
+            val end = match.range.last + 1
+            val word = match.value
+            if (cursorAt in start..end || word.length < 2) continue // still being typed
+            val result = markCache.getOrPut(word) { Suggester.suggest(dict, word, taught) }
+            if (word.lowercase(dict.locale) in taught) continue
+            val correction = result.correction
+            val accentOnly = correction != null &&
+                correction.lowercase(dict.locale) != word.lowercase(dict.locale) &&
+                Dictionary.fold(correction, dict.locale) == Dictionary.fold(word, dict.locale)
+            when {
+                accentOnly -> marks += Mark(start, end, word, MarkKind.ACCENT, null, listOf(correction!!))
+                // Capitalised unknown words are probably names: leave them alone.
+                !result.known && !word[0].isUpperCase() -> {
+                    val fixes = (listOfNotNull(correction) + result.suggestions).distinct().take(2)
+                    marks += Mark(start, end, word, MarkKind.SPELLING, null, fixes)
+                }
+            }
+        }
+        return marks
+    }
+
+    private fun runGrammarCheck() {
+        if (!grammarCheck || !translationActive) return
+        val text = buffer.toString()
+        if (text.isBlank() || text == lastGrammarText) return
+        val language = Prefs.typingLanguage(this)
+        val native = Prefs.outputLanguage(this)
+        val dictionaryHandlesSpelling = markMistakes && dictionary != null
+        val request = ++grammarRequest
+        lastGrammarText = text
+        grammarExecutor.execute {
+            val marks = try {
+                LanguageTool.check(text, language, native)
+                    .filter { it.length > 0 && it.offset >= 0 && it.offset + it.length <= text.length }
+                    .filter { !(dictionaryHandlesSpelling && it.issueType == "misspelling") }
+                    .map {
+                        Mark(
+                            it.offset, it.offset + it.length, text.substring(it.offset, it.offset + it.length),
+                            if (it.issueType == "misspelling") MarkKind.SPELLING else MarkKind.GRAMMAR,
+                            it.message, it.replacements,
+                        )
+                    }
+            } catch (e: Exception) {
+                Log.w(TAG, "Grammar check failed", e)
+                null
+            }
+            mainHandler.post {
+                if (request != grammarRequest) return@post
+                if (marks == null) {
+                    lastGrammarText = "" // try again after the next pause
+                } else {
+                    grammarMarks = marks
+                    refreshUi()
+                }
+            }
+        }
+    }
+
+    /** Explain the selected mistake and offer up to two fixes. */
+    private fun showCorrection() {
+        val panel = correctionPanel ?: return
+        val selected = selectedMark
+        val mark = selected?.let { s -> visibleMarks().firstOrNull { it.sameAs(s) } }
+        if (mark == null) {
+            selectedMark = null
+            panel.visibility = View.GONE
+            return
+        }
+        panel.visibility = View.VISIBLE
+        val languageName = Languages.displayName(Prefs.typingLanguage(this))
+        correctionMessage?.text = when (mark.kind) {
+            MarkKind.ACCENT -> getString(R.string.mark_accent, mark.original, mark.replacements.firstOrNull().orEmpty())
+            MarkKind.SPELLING -> mark.message ?: if (mark.replacements.isNotEmpty()) {
+                getString(R.string.mark_spelling_fix, mark.original)
+            } else {
+                getString(R.string.mark_spelling, mark.original, languageName)
+            }
+            MarkKind.GRAMMAR -> mark.message.orEmpty() +
+                if (mark.replacements.isEmpty()) "\n" + getString(R.string.mark_no_fix) else ""
+        }
+        correctionFixes.forEachIndexed { i, view ->
+            val fix = mark.replacements.getOrNull(i)
+            view?.visibility = if (fix != null) View.VISIBLE else View.GONE
+            view?.text = fix
+            view?.setOnClickListener(if (fix != null) View.OnClickListener { applyFix(mark, fix) } else null)
+        }
+    }
+
+    private fun applyFix(mark: Mark, replacement: String) {
+        if (mark.end > buffer.length || buffer.substring(mark.start, mark.end) != mark.original) return
+        buffer.replace(mark.start, mark.end, replacement)
+        val delta = replacement.length - mark.original.length
+        cursor = when {
+            cursor >= mark.end -> cursor + delta
+            cursor > mark.start -> mark.start + replacement.length
+            else -> cursor
+        }
+        // Grammar marks after the fix just move along; the next check refreshes them.
+        grammarMarks = grammarMarks.mapNotNull {
+            when {
+                it.end <= mark.start -> it
+                it.start >= mark.end -> it.shiftedBy(delta)
+                else -> null
+            }
+        }
+        selectedMark = null
+        lastResult = null
+        gestureWords = null
+        undoAutocorrect = null
+        autoSpaced = false
+        onBufferChanged()
     }
 
     // --- Suggestions, autocorrect, gesture typing -------------------------------------------
@@ -677,6 +1034,7 @@ class LanguageKeyboardService : InputMethodService(),
             Dictionaries.load(this, language, download = true) { loaded ->
                 if (loaded != null && loaded.language == layoutLanguage) {
                     dictionary = loaded
+                    scheduleChecks()
                     refreshUi()
                 } else {
                     updateSuggestions()
@@ -720,7 +1078,8 @@ class LanguageKeyboardService : InputMethodService(),
 
     private fun updateSuggestions() {
         val bar = suggestionBar ?: return
-        val visible = suggestionsEnabled && fieldAllowsTranslation && Dictionaries.isSupported(layoutLanguage)
+        val visible = suggestionsEnabled && fieldAllowsTranslation && Dictionaries.isSupported(layoutLanguage) &&
+            selectedMark == null
         bar.visibility = if (visible) View.VISIBLE else View.GONE
         if (!visible) return
 
@@ -851,6 +1210,11 @@ class LanguageKeyboardService : InputMethodService(),
 
         /** Punctuation that ends a word (and triggers autocorrect). */
         val PUNCTUATION = setOf(".", ",", "!", "?", ":", ";", "،", "؟", "؛")
+
+        const val GRAMMAR_DELAY_MS = 1500L
+
+        /** A word: letters and combining marks, with apostrophes only inside ("don't", "l'eau"). */
+        val WORD = Regex("[\\p{L}\\p{M}]+(?:['’][\\p{L}\\p{M}]+)*")
 
         /** No space is added after these before a swiped word. */
         const val OPENERS = "([{¿¡\"'“‘«"

@@ -36,6 +36,9 @@ class KeyboardView @JvmOverloads constructor(
 
         /** A swipe across the letters (gesture typing), as the finger's x/y positions. */
         fun onGesture(xs: FloatArray, ys: FloatArray)
+
+        /** Sliding along the space bar: move the cursor this many characters (negative = left). */
+        fun onCursorMove(steps: Int)
     }
 
     /** Swiping from a letter key types a word instead of sliding between keys. */
@@ -328,6 +331,10 @@ class KeyboardView @JvmOverloads constructor(
     private val gestureXs = ArrayList<Float>()
     private val gestureYs = ArrayList<Float>()
 
+    // Space-bar cursor control
+    private var cursorSliding = false
+    private var cursorAnchorX = 0f
+
     private val longPressRunnable = Runnable {
         val pk = pressedKey ?: return@Runnable
         when {
@@ -417,6 +424,10 @@ class KeyboardView @JvmOverloads constructor(
             updatePopupSelection(x, y)
             return
         }
+        if (pressedKey?.key?.code == Codes.SPACE && !longPressFired) {
+            slideOnSpace(x)
+            return
+        }
         if (repeating || longPressFired) return
         if (gesturing) {
             val lastX = gestureXs.last()
@@ -445,7 +456,28 @@ class KeyboardView @JvmOverloads constructor(
         }
     }
 
+    /** Slide along the space bar to move the cursor, one character per ~half key width. */
+    private fun slideOnSpace(x: Float) {
+        val step = unitWidth * 0.45f
+        if (!cursorSliding) {
+            if (kotlin.math.abs(x - downX) < unitWidth * 0.5f) return
+            cursorSliding = true
+            cursorAnchorX = downX
+            keyHandler.removeCallbacks(longPressRunnable)
+        }
+        val steps = ((x - cursorAnchorX) / step).toInt()
+        if (steps != 0) {
+            cursorAnchorX += steps * step
+            performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            listener?.onCursorMove(steps)
+        }
+    }
+
     private fun release(commit: Boolean) {
+        if (cursorSliding) {
+            resetTouch() // the slide moved the cursor; don't type a space
+            return
+        }
         keyHandler.removeCallbacks(longPressRunnable)
         keyHandler.removeCallbacks(repeatRunnable)
         if (gesturing) {
@@ -474,6 +506,7 @@ class KeyboardView @JvmOverloads constructor(
         repeating = false
         gesturing = false
         gestureXs.clear(); gestureYs.clear()
+        cursorSliding = false
         invalidate()
     }
 

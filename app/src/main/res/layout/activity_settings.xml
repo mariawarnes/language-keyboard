@@ -175,7 +175,49 @@
             android:text="@string/word_lists_credit"
             android:textAppearance="?attr/textAppearanceBodySmall" />
 
-        <!-- 4. Try it -->
+        <!-- 4. Checking -->
+        <TextView
+            android:id="@+id/checking_title"
+            style="@style/SettingsSection" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/mark_switch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/mark_mistakes"
+            android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/mark_mistakes_summary"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/grammar_switch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/grammar_check"
+            android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/grammar_check_summary"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
+
+        <TextView
+            android:id="@+id/grammar_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:visibility="gone" />
+
+        <!-- 5. Try it -->
         <TextView
             style="@style/SettingsSection"
             android:text="@string/section_try" />

@@ -18,6 +18,8 @@ object Prefs {
     const val KEY_GESTURE_TYPING = "gesture_typing"
     const val KEY_SUGGESTIONS = "show_suggestions"
     const val KEY_AUTOCORRECT = "autocorrect"
+    const val KEY_MARK_MISTAKES = "mark_mistakes"
+    const val KEY_GRAMMAR_CHECK = "grammar_check"
     private const val KEY_USER_WORDS = "user_words"
 
     fun get(context: Context): SharedPreferences =
@@ -46,6 +48,10 @@ object Prefs {
     fun gestureTyping(context: Context): Boolean = get(context).getBoolean(KEY_GESTURE_TYPING, true)
     fun suggestions(context: Context): Boolean = get(context).getBoolean(KEY_SUGGESTIONS, true)
     fun autocorrect(context: Context): Boolean = get(context).getBoolean(KEY_AUTOCORRECT, true)
+    fun markMistakes(context: Context): Boolean = get(context).getBoolean(KEY_MARK_MISTAKES, true)
+
+    /** Off by default: it sends the practice text to LanguageTool's servers. */
+    fun grammarCheck(context: Context): Boolean = get(context).getBoolean(KEY_GRAMMAR_CHECK, false)
 
     fun setFlag(context: Context, key: String, value: Boolean) {
         get(context).edit().putBoolean(key, value).apply()

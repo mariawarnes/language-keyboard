@@ -13,6 +13,22 @@
         <item name="android:textColor">@color/brand</item>
     </style>
 
+    <style name="CorrectionChip">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:layout_marginStart">6dp</item>
+        <item name="android:background">@drawable/strip_chip</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxWidth">140dp</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textColor">@color/strip_text</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
     <style name="SuggestionSlot">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">match_parent</item>

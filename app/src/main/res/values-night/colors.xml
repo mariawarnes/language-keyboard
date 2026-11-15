@@ -16,4 +16,8 @@
     <color name="strip_chip">#FF394457</color>
     <color name="strip_chip_off">#FF3C4043</color>
     <color name="brand">#FF8AB4F8</color>
+    <color name="mark_spelling">#FFF28B82</color>
+    <color name="mark_accent">#FFFDD663</color>
+    <color name="mark_grammar">#FF8AB4F8</color>
+    <color name="mark_selected">#55FDD663</color>
 </resources>

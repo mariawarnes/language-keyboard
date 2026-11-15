@@ -43,9 +43,9 @@
     <string name="word_lists_credit">Word lists: FrequencyWords by Hermit Dave, from OpenSubtitles, CC BY-SA 4.0.</string>
     <string name="suggestions_loading">Getting word list…</string>
 
-    <string name="section_try">4. Try it</string>
+    <string name="section_try">5. Try it</string>
     <string name="try_hint">Tap here and type with Language Keyboard</string>
-    <string name="how_to_use">Tips: the ✓ key (where Enter usually is) locks in the current translation. Tap the language chip (ES → EN) above the keys to turn translation off and type straight in your friends\' language; the keys switch to their layout. Tap a suggestion to use it; tap your own word (in quotes) to keep it and teach it to the keyboard. Long-press a letter for accents, long-press the space bar to switch keyboards.</string>
+    <string name="how_to_use">Tips: the ✓ key (where Enter usually is) locks in the current translation. Tap the language chip (ES → EN) above the keys to turn translation off and type straight in your friends\' language; the keys switch to their layout. Tap a suggestion to use it; tap your own word (in quotes) to keep it and teach it to the keyboard. Slide along the space bar to move the cursor. Long-press a letter for accents, long-press the space bar to switch keyboards.</string>
 
     <string name="strip_hint">Type in %1$s…</string>
     <string name="strip_passthrough">Translation off: typing goes straight in</string>
@@ -56,4 +56,19 @@
     <string name="cd_toggle_translation">Turn translation on or off</string>
     <string name="cd_clear">Clear what you typed</string>
     <string name="cd_settings">Keyboard settings</string>
+    <string name="cd_marks">Show the next marked mistake</string>
+    <string name="cd_close">Close</string>
+    <string name="marks_badge">✎ %1$d</string>
+    <string name="mark_spelling">\"%1$s\" isn\'t in the %2$s word list. Check the spelling.</string>
+    <string name="mark_spelling_fix">\"%1$s\" looks misspelt.</string>
+    <string name="mark_accent">\"%1$s\" needs an accent: %2$s</string>
+    <string name="marks_before_send">Possible mistakes are marked. Fix them, or press ✓ again to use it as it is.</string>
+    <string name="mark_no_fix">No suggestion. Tap ✕ to leave it.</string>
+
+    <string name="section_checking">4. Checking my %1$s</string>
+    <string name="mark_mistakes">Mark mistakes</string>
+    <string name="mark_mistakes_summary">Underlines misspelt words (red) and missing accents (orange) in the practice bar. Tap one, or the ✎ badge, to see the fix. Works offline.</string>
+    <string name="grammar_check">Grammar check (online)</string>
+    <string name="grammar_check_summary">Also checks grammar, like gender agreement and verb forms (blue), and explains each mistake. Sends the text in the practice bar to LanguageTool (languagetool.org) when you pause typing. Free, no account. Your friends\' translation isn\'t sent.</string>
+    <string name="grammar_unsupported">Grammar check isn\'t available for %1$s.</string>
 </resources>

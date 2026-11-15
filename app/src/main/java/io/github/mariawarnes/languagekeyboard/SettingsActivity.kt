@@ -86,6 +86,8 @@ class SettingsActivity : AppCompatActivity() {
         bindSwitch(R.id.gesture_switch, Prefs.KEY_GESTURE_TYPING, Prefs.gestureTyping(this))
         bindSwitch(R.id.suggestions_switch, Prefs.KEY_SUGGESTIONS, Prefs.suggestions(this))
         bindSwitch(R.id.autocorrect_switch, Prefs.KEY_AUTOCORRECT, Prefs.autocorrect(this))
+        bindSwitch(R.id.mark_switch, Prefs.KEY_MARK_MISTAKES, Prefs.markMistakes(this))
+        bindSwitch(R.id.grammar_switch, Prefs.KEY_GRAMMAR_CHECK, Prefs.grammarCheck(this))
         wordListStatus = findViewById(R.id.word_list_status)
         downloadWordsButton = findViewById(R.id.download_words_button)
         downloadWordsButton.setOnClickListener { downloadWordLists() }
@@ -201,10 +203,20 @@ class SettingsActivity : AppCompatActivity() {
         refreshWordListStatus()
     }
 
+    private fun refreshCheckingSection(typing: String) {
+        val name = Languages.displayName(typing)
+        findViewById<TextView>(R.id.checking_title).text = getString(R.string.section_checking, name)
+        findViewById<TextView>(R.id.grammar_note).apply {
+            visibility = if (LanguageTool.isSupported(typing)) View.GONE else View.VISIBLE
+            text = getString(R.string.grammar_unsupported, name)
+        }
+    }
+
     private fun refreshModelStatus() {
         val typing = selectedTyping()
         val output = selectedOutput()
         refreshLayoutNote(typing, output)
+        refreshCheckingSection(typing)
         refreshWordListStatus()
         if (downloading) return
         if (typing == output) {
