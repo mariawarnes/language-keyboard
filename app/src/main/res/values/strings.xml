@@ -46,9 +46,6 @@
     <string name="section_try">5. Try it</string>
     <string name="try_hint">Tap here and type with Language Keyboard</string>
     <string name="how_to_use">Tips: the ✓ key (where Enter usually is) locks in the current translation. Tap EN on the ES | EN switch for direct mode: type straight in your friends\' language and see it in the language you\'re learning above the keys. Tap ES to go back. Tap a suggestion to use it; tap your own word (in quotes) to keep it and teach it to the keyboard. Hold and slide along the space bar to move the cursor. Long-press a letter for accents. Use the 🌐 button under the keyboard to switch keyboards.</string>
-
-    <string name="strip_hint">Type in %1$s…</string>
-    <string name="strip_direct_hint">Type in %1$s to see it in %2$s here</string>
     <string name="strip_downloading">Downloading %1$s → %2$s language pack…</string>
     <string name="strip_download_failed">Couldn\'t download the language pack. Open settings (⚙) to retry.</string>
     <string name="strip_translate_failed">Translation failed</string>

@@ -835,7 +835,7 @@ class LanguageKeyboardService : InputMethodService(),
                 fieldBlocked -> getString(R.string.strip_no_translate_field)
                 !active && previewSource.isEmpty() ->
                     if (fieldIsAddress) getString(R.string.strip_address_field, Languages.shortLabel(typing))
-                    else getString(R.string.strip_direct_hint, name(output), name(typing))
+                    else Languages.typeInHint(output)
                 !active -> null
                 engine.state == TranslationEngine.State.DOWNLOADING ->
                     getString(R.string.strip_downloading, name(typing), name(output))
@@ -869,7 +869,7 @@ class LanguageKeyboardService : InputMethodService(),
             } else {
                 tv.cursorOffset = -1
                 tv.marks = emptyList()
-                tv.text = message ?: getString(R.string.strip_hint, name(typing))
+                tv.text = message ?: Languages.typeInHint(typing)
                 tv.setTextColor(secondary)
                 practiceScroll?.scrollTo(0, 0)
             }
