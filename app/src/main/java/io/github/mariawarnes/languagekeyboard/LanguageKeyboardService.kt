@@ -16,6 +16,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.ExtractedTextRequest
 import android.widget.HorizontalScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -23,7 +24,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import java.util.Locale
 import java.util.concurrent.Executors
-import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * The keyboard.
@@ -42,7 +43,7 @@ class LanguageKeyboardService : InputMethodService(),
 
     private var keyboardView: KeyboardView? = null
     private var languageChip: TextView? = null
-    private var typedText: TextView? = null
+    private var typedText: PracticeTextView? = null
     private var translatingIndicator: TextView? = null
 
     // --- What you typed and what's in the field ---------------------------------------------
@@ -656,6 +657,7 @@ class LanguageKeyboardService : InputMethodService(),
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         selStart = newSelStart
         selEnd = newSelEnd
+        if (newSelStart != lastSlideTarget) lastSlideTarget = -1
         if (buffer.isEmpty() && composed.isEmpty()) {
             updateAutoShift()
             updateSuggestions()
@@ -725,16 +727,14 @@ class LanguageKeyboardService : InputMethodService(),
                 else -> statusMessage
             }
             val marks = visibleMarks()
+            tv.cursorColor = ContextCompat.getColor(this, R.color.brand)
+            tv.highlightColor = ContextCompat.getColor(this, R.color.mark_selected)
             if (active && buffer.isNotEmpty()) {
                 val text = SpannableStringBuilder(buffer)
-                val density = resources.displayMetrics.density
-                for (m in marks) {
-                    val highlight = if (selectedMark?.sameAs(m) == true) ContextCompat.getColor(this, R.color.mark_selected) else null
-                    text.setSpan(SquigglySpan(markColor(m.kind), highlight, density), m.start, m.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                tv.cursorOffset = cursor
+                tv.marks = marks.map {
+                    PracticeTextView.Mark(it.start, it.end, markColor(it.kind), selectedMark?.sameAs(it) == true)
                 }
-                // The cursor; spans after it shift along automatically.
-                text.insert(cursor, "▏")
-                text.setSpan(ForegroundColorSpan(secondary), cursor, cursor + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 if (message != null) {
                     val start = text.length
                     text.append("  ").append(message)
@@ -744,6 +744,8 @@ class LanguageKeyboardService : InputMethodService(),
                 tv.setTextColor(primary)
                 tv.post { scrollPracticeToCursor() }
             } else {
+                tv.cursorOffset = -1
+                tv.marks = emptyList()
                 tv.text = message ?: getString(R.string.strip_hint, name(typing))
                 tv.setTextColor(secondary)
                 practiceScroll?.scrollTo(0, 0)
@@ -771,30 +773,39 @@ class LanguageKeyboardService : InputMethodService(),
         sv.smoothScrollTo(maxOf(0, target), 0)
     }
 
-    /** Slide on the space bar: move through the practice text, or the app's own text. */
-    override fun onCursorMove(steps: Int) {
+    /**
+     * Slide on the space bar: the finger's position across the keyboard places the cursor in the
+     * practice text (or, with nothing there, in the app's own text box).
+     */
+    override fun onCursorSlide(fraction: Float): Boolean {
         gestureWords = null
         undoAutocorrect = null
         autoSpaced = false
         if (translationActive && buffer.isNotEmpty()) {
-            var c = cursor
-            repeat(abs(steps)) {
-                c = if (steps < 0) {
-                    if (c > 0) buffer.offsetByCodePoints(c, -1) else 0
-                } else {
-                    if (c < buffer.length) buffer.offsetByCodePoints(c, 1) else buffer.length
-                }
-            }
-            if (c == cursor) return
-            cursor = c
+            var target = (fraction * buffer.length).roundToInt().coerceIn(0, buffer.length)
+            // Don't land between the two halves of an emoji or other surrogate pair.
+            if (target in 1 until buffer.length &&
+                Character.isLowSurrogate(buffer[target]) && Character.isHighSurrogate(buffer[target - 1])
+            ) target--
+            if (target == cursor) return false
+            cursor = target
             lastResult = null
             updateAutoShift()
             refreshUi()
-        } else {
-            val key = if (steps < 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
-            repeat(abs(steps)) { sendDownUpKeyEvents(key) }
+            return true
         }
+        val ic = currentInputConnection ?: return false
+        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0) ?: return false
+        val length = extracted.text?.length ?: 0
+        val target = extracted.startOffset + (fraction * length).roundToInt().coerceIn(0, length)
+        if (target == lastSlideTarget) return false
+        lastSlideTarget = target
+        ic.setSelection(target, target)
+        return true
     }
+
+    /** Last cursor position set by sliding in the app's own text, to avoid repeating it. */
+    private var lastSlideTarget = -1
 
     /** Tap the practice text to put the cursor there (and open a marked mistake). */
     @SuppressLint("ClickableViewAccessibility")
@@ -802,9 +813,7 @@ class LanguageKeyboardService : InputMethodService(),
         if (event.action != MotionEvent.ACTION_UP || !translationActive || buffer.isEmpty()) return true
         val tv = v as TextView
         val layout = tv.layout ?: return true
-        var offset = layout.getOffsetForHorizontal(0, event.x - tv.totalPaddingLeft)
-        if (offset > cursor) offset -= 1 // skip over the cursor glyph
-        offset = offset.coerceIn(0, buffer.length)
+        val offset = layout.getOffsetForHorizontal(0, event.x - tv.totalPaddingLeft).coerceIn(0, buffer.length)
         selectedMark = visibleMarks().firstOrNull { offset in it.start..it.end }
         cursor = selectedMark?.end ?: offset
         gestureWords = null

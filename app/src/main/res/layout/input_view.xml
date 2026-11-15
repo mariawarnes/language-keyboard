@@ -39,7 +39,7 @@
             android:fillViewport="true"
             android:scrollbars="none">
 
-            <TextView
+            <io.github.mariawarnes.languagekeyboard.PracticeTextView
                 android:id="@+id/typed_text"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"

@@ -35,8 +35,11 @@ class KeyboardView @JvmOverloads constructor(
         /** A swipe across the letters (gesture typing), as the finger's x/y positions. */
         fun onGesture(xs: FloatArray, ys: FloatArray)
 
-        /** Sliding along the space bar: move the cursor this many characters (negative = left). */
-        fun onCursorMove(steps: Int)
+        /**
+         * Sliding along the space bar: put the cursor at [fraction] of the way through the text
+         * (0 = left edge of the keyboard = start, 1 = right edge = end). Returns true if it moved.
+         */
+        fun onCursorSlide(fraction: Float): Boolean
     }
 
     /** Swiping from a letter key types a word instead of sliding between keys. */
@@ -331,7 +334,6 @@ class KeyboardView @JvmOverloads constructor(
 
     // Space-bar cursor control
     private var cursorSliding = false
-    private var cursorAnchorX = 0f
 
     private val longPressRunnable = Runnable {
         val pk = pressedKey ?: return@Runnable
@@ -448,21 +450,21 @@ class KeyboardView @JvmOverloads constructor(
         }
     }
 
-    /** Slide along the space bar to move the cursor, one character per ~half key width. */
+    /**
+     * Slide along the space bar to place the cursor: the finger's position across the whole
+     * keyboard maps straight onto the text, left edge = start, right edge = end.
+     */
     private fun slideOnSpace(x: Float) {
-        val step = unitWidth * 0.45f
         if (!cursorSliding) {
-            if (kotlin.math.abs(x - downX) < unitWidth * 0.5f) return
+            if (kotlin.math.abs(x - downX) < unitWidth * 0.5f) return // a tap types a space
             cursorSliding = true
-            cursorAnchorX = downX
             keyHandler.removeCallbacks(longPressRunnable)
+            invalidate()
         }
-        val steps = ((x - cursorAnchorX) / step).toInt()
-        if (steps != 0) {
-            cursorAnchorX += steps * step
-            performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-            listener?.onCursorMove(steps)
-        }
+        // A small margin at each edge so the very start and end are easy to reach.
+        val margin = unitWidth * 0.5f
+        val fraction = ((x - margin) / (width - 2 * margin)).coerceIn(0f, 1f)
+        if (listener?.onCursorSlide(fraction) == true) performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
     }
 
     private fun release(commit: Boolean) {
