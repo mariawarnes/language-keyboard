@@ -24,7 +24,23 @@
             android:text="@string/settings_intro"
             android:textAppearance="?attr/textAppearanceBodyMedium" />
 
-        <!-- 1. Enable -->
+        <!-- 1. App language -->
+        <TextView
+            style="@style/SettingsSection"
+            android:text="@string/section_app_language" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/label_app_language"
+            android:textAppearance="?attr/textAppearanceLabelLarge" />
+
+        <Spinner
+            android:id="@+id/app_language"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <!-- 2. Enable -->
         <TextView
             style="@style/SettingsSection"
             android:text="@string/section_setup" />

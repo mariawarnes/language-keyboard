@@ -11,10 +11,13 @@ object Prefs {
     /** The language you are practising: what you type on the keyboard. */
     const val KEY_TYPING_LANGUAGE = "typing_language"
 
-    /** Your friends' language: what actually gets inserted into the text field. */
+    /** Your own language: what actually gets inserted into the text field. */
     const val KEY_OUTPUT_LANGUAGE = "output_language"
 
     const val KEY_TRANSLATE_ENABLED = "translate_enabled"
+
+    /** Language of the app's own text; "" = same as your language. */
+    const val KEY_APP_LANGUAGE = "app_language"
     const val KEY_GESTURE_TYPING = "gesture_typing"
     const val KEY_SUGGESTIONS = "show_suggestions"
     const val KEY_AUTOCORRECT = "autocorrect"
@@ -39,6 +42,12 @@ object Prefs {
             .putString(KEY_TYPING_LANGUAGE, typing)
             .putString(KEY_OUTPUT_LANGUAGE, output)
             .apply()
+    }
+
+    fun appLanguage(context: Context): String = get(context).getString(KEY_APP_LANGUAGE, "") ?: ""
+
+    fun setAppLanguage(context: Context, language: String) {
+        get(context).edit().putString(KEY_APP_LANGUAGE, language).apply()
     }
 
     fun setTranslateEnabled(context: Context, enabled: Boolean) {

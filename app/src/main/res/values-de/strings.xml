@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ime_subtype_label">Üben und direkt schreiben</string>
+
+    <string name="settings_intro">Übungsmodus: Schreib in der Sprache, die du lernst; gesendet wird in deiner Sprache, und die Leiste über den Tasten zeigt, was du geschrieben hast. Direktmodus: Schreib wie gewohnt in deiner eigenen Sprache, und die Leiste zeigt es live in der Sprache, die du lernst. Der Schalter ES | EN über den Tasten zeigt, in welcher Sprache du schreibst; tippe auf die andere, um zu wechseln.</string>
+
+    <string name="section_app_language">1. App-Sprache</string>
+    <string name="label_app_language">Sprache dieser Einstellungen und der Tastaturmeldungen</string>
+    <string name="app_language_auto">Wie meine Sprache (%1$s)</string>
+
+    <string name="section_setup">2. Tastatur einschalten</string>
+    <string name="enable_keyboard">In den Systemeinstellungen aktivieren</string>
+    <string name="choose_keyboard">Zu Language Keyboard wechseln</string>
+    <string name="status_enabled">Aktiviert ✓</string>
+    <string name="status_not_enabled">Noch nicht aktiviert</string>
+    <string name="status_selected">Aktiviert und ausgewählt ✓</string>
+
+    <string name="section_languages">3. Sprachen wählen</string>
+    <string name="label_typing_language">Sprache, die ich lerne (darin schreibe ich im Übungsmodus)</string>
+    <string name="label_output_language">Meine Sprache (wird gesendet; darin schreibe ich im Direktmodus)</string>
+    <string name="swap_languages">Tauschen</string>
+    <string name="layout_note">Tastaturlayout: %1$s</string>
+    <string name="layout_missing">Für %1$s gibt es noch kein Tastaturlayout, daher wird QWERTY verwendet.</string>
+    <string name="layout_note_off">Im Direktmodus schreibst du auf %1$s, daher wechseln die Tasten zu dessen Layout.</string>
+    <string name="download_models">Sprachpakete herunterladen</string>
+    <string name="models_ready">Sprachpakete bereit ✓ – die Übersetzung funktioniert offline.</string>
+    <string name="models_missing">Die Sprachpakete müssen heruntergeladen werden (je etwa 30 MB).</string>
+    <string name="models_downloading">Sprachpakete werden heruntergeladen…</string>
+    <string name="models_failed">Download fehlgeschlagen: %1$s</string>
+    <string name="same_language">Wähle zwei verschiedene Sprachen.</string>
+
+    <string name="section_typing">4. Schreiben</string>
+    <string name="gesture_typing">Bewegungseingabe</string>
+    <string name="gesture_typing_summary">Fahr über die Buchstaben, um ein Wort zu schreiben, ohne den Finger anzuheben.</string>
+    <string name="show_suggestions">Vorschläge anzeigen</string>
+    <string name="show_suggestions_summary">Wortvorschläge über den Tasten. Akzente werden ignoriert: \"cancion\" schlägt \"canción\" vor.</string>
+    <string name="autocorrect">Autokorrektur</string>
+    <string name="autocorrect_summary">Korrigiert Tippfehler und fehlende Akzente, wenn du die Leertaste drückst. Löschen direkt danach macht es rückgängig.</string>
+    <string name="word_lists">Wortlisten: %1$s</string>
+    <string name="word_list_ready">%1$s ✓</string>
+    <string name="word_list_missing">%1$s (wird automatisch geladen, ~650 KB)</string>
+    <string name="word_list_loading">%1$s (wird geladen…)</string>
+    <string name="word_list_unsupported">%1$s (noch nicht verfügbar)</string>
+    <string name="download_word_lists">Wortlisten jetzt herunterladen</string>
+    <string name="word_lists_credit">Wortlisten: FrequencyWords von Hermit Dave, aus OpenSubtitles, CC BY-SA 4.0.</string>
+    <string name="suggestions_loading">Wortliste wird geladen…</string>
+
+    <string name="section_checking">5. Mein %1$s prüfen</string>
+    <string name="mark_mistakes">Fehler markieren</string>
+    <string name="mark_mistakes_summary">Unterstreicht falsch geschriebene Wörter und fehlende Akzente in der Übungsleiste mit einer roten Wellenlinie. Tippe auf das Wort, um die Korrektur zu sehen. Funktioniert offline.</string>
+    <string name="grammar_check">Grammatikprüfung (online)</string>
+    <string name="grammar_check_summary">Prüft auch die Grammatik, etwa Genus-Übereinstimmung und Verbformen (blaue Wellenlinie), und erklärt jeden Fehler. Sendet den Text der Übungsleiste an LanguageTool (languagetool.org), wenn du eine Pause machst. Kostenlos, ohne Konto. Gesendet wird nur dein Übungstext, nicht die Übersetzung.</string>
+    <string name="grammar_unsupported">Die Grammatikprüfung ist für %1$s nicht verfügbar.</string>
+
+    <string name="section_try">6. Ausprobieren</string>
+    <string name="try_hint">Hier tippen und mit Language Keyboard schreiben</string>
+    <string name="how_to_use">Tipps: Die Taste ✓ (wo sonst die Eingabetaste ist) übernimmt die aktuelle Übersetzung. Tippe auf EN am Schalter ES | EN für den Direktmodus: Schreib direkt in deiner Sprache und sieh sie über den Tasten in der Sprache, die du lernst. Tippe auf ES, um zurückzukehren. Tippe auf einen Vorschlag, um ihn zu verwenden; tippe auf dein eigenes Wort (in Anführungszeichen), um es zu behalten und der Tastatur beizubringen. Halte die Leertaste gedrückt und wische, um den Cursor zu bewegen. Halte einen Buchstaben gedrückt für Akzente. Mit der Taste 🌐 unter der Tastatur wechselst du die Tastatur.</string>
+
+    <string name="strip_downloading">Sprachpaket %1$s → %2$s wird heruntergeladen…</string>
+    <string name="strip_download_failed">Das Sprachpaket konnte nicht heruntergeladen werden. Öffne die Einstellungen (⚙), um es erneut zu versuchen.</string>
+    <string name="strip_translate_failed">Übersetzung fehlgeschlagen</string>
+    <string name="strip_no_translate_field">In diesem Feld wird nicht übersetzt</string>
+    <string name="strip_address_field">Adressleiste: Tippe auf %1$s, um hier zu üben</string>
+    <string name="cd_typing_in_learning">Schreiben auf %1$s (Übungsmodus). Tippen, um in deiner Sprache zu schreiben.</string>
+    <string name="cd_typing_in_native">Schreiben auf %1$s (Direktmodus). Tippen, um zu üben.</string>
+    <string name="cd_clear">Geschriebenes löschen</string>
+    <string name="cd_settings">Tastatureinstellungen</string>
+    <string name="cd_close">Schließen</string>
+    <string name="mark_spelling">\"%1$s\" steht nicht in der Wortliste (%2$s). Prüfe die Schreibweise.</string>
+    <string name="mark_spelling_fix">\"%1$s\" scheint falsch geschrieben zu sein.</string>
+    <string name="mark_accent">\"%1$s\" braucht einen Akzent: %2$s</string>
+    <string name="marks_before_send">Mögliche Fehler sind markiert. Korrigiere sie oder drücke noch einmal ✓, um den Text so zu übernehmen.</string>
+    <string name="mark_no_fix">Kein Vorschlag. Tippe auf ✕, um es so zu lassen.</string>
+</resources>

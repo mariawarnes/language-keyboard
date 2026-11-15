@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ime_subtype_label">Pratique et saisie directe</string>
+
+    <string name="settings_intro">Mode pratique : écrivez dans la langue que vous apprenez et le texte part dans votre langue, tandis que la barre au-dessus des touches affiche ce que vous avez écrit. Mode direct : écrivez dans votre langue comme d\'habitude, et la barre l\'affiche en direct dans la langue que vous apprenez. Le sélecteur ES | EN au-dessus des touches indique dans quelle langue vous écrivez ; touchez l\'autre pour changer.</string>
+
+    <string name="section_app_language">1. Langue de l\'application</string>
+    <string name="label_app_language">Langue de ces paramètres et des messages du clavier</string>
+    <string name="app_language_auto">Comme ma langue (%1$s)</string>
+
+    <string name="section_setup">2. Activer le clavier</string>
+    <string name="enable_keyboard">Activer dans les paramètres système</string>
+    <string name="choose_keyboard">Passer à Language Keyboard</string>
+    <string name="status_enabled">Activé ✓</string>
+    <string name="status_not_enabled">Pas encore activé</string>
+    <string name="status_selected">Activé et sélectionné ✓</string>
+
+    <string name="section_languages">3. Choisir vos langues</string>
+    <string name="label_typing_language">Langue que j\'apprends (celle que j\'écris en mode pratique)</string>
+    <string name="label_output_language">Ma langue (celle qui est envoyée, et que j\'écris en mode direct)</string>
+    <string name="swap_languages">Inverser</string>
+    <string name="layout_note">Disposition du clavier : %1$s</string>
+    <string name="layout_missing">Il n\'y a pas encore de disposition pour : %1$s. Vous aurez un clavier QWERTY.</string>
+    <string name="layout_note_off">En mode direct, vous écrivez en %1$s : les touches passent à sa disposition.</string>
+    <string name="download_models">Télécharger les packs de langue</string>
+    <string name="models_ready">Packs de langue prêts ✓ — la traduction fonctionne hors ligne.</string>
+    <string name="models_missing">Les packs de langue doivent être téléchargés (environ 30 Mo chacun).</string>
+    <string name="models_downloading">Téléchargement des packs de langue…</string>
+    <string name="models_failed">Échec du téléchargement : %1$s</string>
+    <string name="same_language">Choisissez deux langues différentes.</string>
+
+    <string name="section_typing">4. Saisie</string>
+    <string name="gesture_typing">Saisie gestuelle</string>
+    <string name="gesture_typing_summary">Faites glisser le doigt sur les lettres pour écrire un mot sans le lever.</string>
+    <string name="show_suggestions">Afficher les suggestions</string>
+    <string name="show_suggestions_summary">Suggestions de mots au-dessus des touches. Les accents sont ignorés : taper \"cancion\" propose \"canción\".</string>
+    <string name="autocorrect">Correction automatique</string>
+    <string name="autocorrect_summary">Corrige les fautes de frappe et les accents manquants quand vous appuyez sur espace. Effacer juste après annule la correction.</string>
+    <string name="word_lists">Listes de mots : %1$s</string>
+    <string name="word_list_ready">%1$s ✓</string>
+    <string name="word_list_missing">%1$s (téléchargement automatique, ~650 Ko)</string>
+    <string name="word_list_loading">%1$s (téléchargement…)</string>
+    <string name="word_list_unsupported">%1$s (pas encore disponible)</string>
+    <string name="download_word_lists">Télécharger les listes de mots</string>
+    <string name="word_lists_credit">Listes de mots : FrequencyWords de Hermit Dave, d\'après OpenSubtitles, CC BY-SA 4.0.</string>
+    <string name="suggestions_loading">Chargement de la liste de mots…</string>
+
+    <string name="section_checking">5. Vérifier mon %1$s</string>
+    <string name="mark_mistakes">Signaler les fautes</string>
+    <string name="mark_mistakes_summary">Souligne d\'une vague rouge les mots mal orthographiés et les accents manquants dans la barre de pratique. Touchez le mot pour voir la correction. Fonctionne hors ligne.</string>
+    <string name="grammar_check">Vérification grammaticale (en ligne)</string>
+    <string name="grammar_check_summary">Vérifie aussi la grammaire, comme l\'accord en genre et les formes verbales (vague bleue), et explique chaque faute. Envoie le texte de la barre de pratique à LanguageTool (languagetool.org) quand vous faites une pause. Gratuit, sans compte. Seul votre texte de pratique est envoyé, pas la traduction.</string>
+    <string name="grammar_unsupported">La vérification grammaticale n\'est pas disponible pour : %1$s.</string>
+
+    <string name="section_try">6. Essayer</string>
+    <string name="try_hint">Touchez ici et écrivez avec Language Keyboard</string>
+    <string name="how_to_use">Astuces : la touche ✓ (à la place d\'Entrée) valide la traduction en cours. Touchez EN sur le sélecteur ES | EN pour le mode direct : écrivez dans votre langue et voyez-la au-dessus des touches dans la langue que vous apprenez. Touchez ES pour revenir. Touchez une suggestion pour l\'utiliser ; touchez votre propre mot (entre guillemets) pour le garder et l\'apprendre au clavier. Maintenez la barre d\'espace et glissez pour déplacer le curseur. Maintenez une lettre pour les accents. Le bouton 🌐 sous le clavier change de clavier.</string>
+
+    <string name="strip_downloading">Téléchargement du pack %1$s → %2$s…</string>
+    <string name="strip_download_failed">Impossible de télécharger le pack de langue. Ouvrez les paramètres (⚙) pour réessayer.</string>
+    <string name="strip_translate_failed">Échec de la traduction</string>
+    <string name="strip_no_translate_field">Pas de traduction dans ce champ</string>
+    <string name="strip_address_field">Barre d\'adresse : touchez %1$s pour pratiquer ici</string>
+    <string name="cd_typing_in_learning">Saisie en %1$s (mode pratique). Touchez pour écrire dans votre langue.</string>
+    <string name="cd_typing_in_native">Saisie en %1$s (mode direct). Touchez pour pratiquer.</string>
+    <string name="cd_clear">Effacer ce que vous avez écrit</string>
+    <string name="cd_settings">Paramètres du clavier</string>
+    <string name="cd_close">Fermer</string>
+    <string name="mark_spelling">\"%1$s\" n\'est pas dans la liste de mots (%2$s). Vérifiez l\'orthographe.</string>
+    <string name="mark_spelling_fix">\"%1$s\" semble mal orthographié.</string>
+    <string name="mark_accent">\"%1$s\" a besoin d\'un accent : %2$s</string>
+    <string name="marks_before_send">Des fautes possibles sont signalées. Corrigez-les, ou appuyez de nouveau sur ✓ pour garder le texte tel quel.</string>
+    <string name="mark_no_fix">Aucune suggestion. Touchez ✕ pour laisser tel quel.</string>
+</resources>

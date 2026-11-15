@@ -1,21 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Language Keyboard</string>
-    <string name="ime_name">Language Keyboard</string>
+    <string name="app_name" translatable="false">Language Keyboard</string>
+    <string name="ime_name" translatable="false">Language Keyboard</string>
     <string name="ime_subtype_label">Practice and direct typing</string>
 
-    <string name="settings_intro">Practice mode: type in the language you\'re learning, and your friends receive it in theirs; you see what you typed in the bar above the keys. Direct mode: type in your own language as usual, and the bar shows it live in the language you\'re learning. The ES | EN switch above the keys shows which language you\'re typing in; tap the other one to change.</string>
+    <string name="settings_intro">Practice mode: type in the language you\'re learning and it goes out in your language, while the bar above the keys shows what you typed. Direct mode: type in your own language as usual, and the bar shows it live in the language you\'re learning. The ES | EN switch above the keys shows which language you\'re typing in; tap the other one to change.</string>
 
-    <string name="section_setup">1. Turn on the keyboard</string>
+    <string name="section_app_language">1. App language</string>
+    <string name="label_app_language">Language for these settings and the keyboard\'s messages</string>
+    <string name="app_language_auto">Same as my language (%1$s)</string>
+
+    <string name="section_setup">2. Turn on the keyboard</string>
     <string name="enable_keyboard">Enable in system settings</string>
     <string name="choose_keyboard">Switch to Language Keyboard</string>
     <string name="status_enabled">Enabled ✓</string>
     <string name="status_not_enabled">Not enabled yet</string>
     <string name="status_selected">Enabled and selected ✓</string>
 
-    <string name="section_languages">2. Choose your languages</string>
-    <string name="label_typing_language">I type in (the language I\'m practising)</string>
-    <string name="label_output_language">It gets sent in (my friends\' language)</string>
+    <string name="section_languages">3. Choose your languages</string>
+    <string name="label_typing_language">Language I\'m learning (what I type in practice mode)</string>
+    <string name="label_output_language">My language (what gets sent, and what I type in direct mode)</string>
     <string name="swap_languages">Swap</string>
     <string name="layout_note">Keyboard layout: %1$s</string>
     <string name="layout_missing">There\'s no %1$s keyboard layout yet, so you\'ll get QWERTY.</string>
@@ -27,7 +31,7 @@
     <string name="models_failed">Download failed: %1$s</string>
     <string name="same_language">Pick two different languages.</string>
 
-    <string name="section_typing">3. Typing</string>
+    <string name="section_typing">4. Typing</string>
     <string name="gesture_typing">Gesture typing</string>
     <string name="gesture_typing_summary">Slide across the letters to type a word, without lifting your finger.</string>
     <string name="show_suggestions">Show suggestions</string>
@@ -43,9 +47,17 @@
     <string name="word_lists_credit">Word lists: FrequencyWords by Hermit Dave, from OpenSubtitles, CC BY-SA 4.0.</string>
     <string name="suggestions_loading">Getting word list…</string>
 
-    <string name="section_try">5. Try it</string>
+    <string name="section_checking">5. Checking my %1$s</string>
+    <string name="mark_mistakes">Mark mistakes</string>
+    <string name="mark_mistakes_summary">Puts a red squiggly line under misspelt words and missing accents in the practice bar. Tap the word to see the fix. Works offline.</string>
+    <string name="grammar_check">Grammar check (online)</string>
+    <string name="grammar_check_summary">Also checks grammar, like gender agreement and verb forms (blue squiggly line), and explains each mistake. Sends the text in the practice bar to LanguageTool (languagetool.org) when you pause typing. Free, no account. Only your practice text is sent, not the translation.</string>
+    <string name="grammar_unsupported">Grammar check isn\'t available for %1$s.</string>
+
+    <string name="section_try">6. Try it</string>
     <string name="try_hint">Tap here and type with Language Keyboard</string>
-    <string name="how_to_use">Tips: the ✓ key (where Enter usually is) locks in the current translation. Tap EN on the ES | EN switch for direct mode: type straight in your friends\' language and see it in the language you\'re learning above the keys. Tap ES to go back. Tap a suggestion to use it; tap your own word (in quotes) to keep it and teach it to the keyboard. Hold and slide along the space bar to move the cursor. Long-press a letter for accents. Use the 🌐 button under the keyboard to switch keyboards.</string>
+    <string name="how_to_use">Tips: the ✓ key (where Enter usually is) locks in the current translation. Tap EN on the ES | EN switch for direct mode: type straight in your own language and see it in the language you\'re learning above the keys. Tap ES to go back. Tap a suggestion to use it; tap your own word (in quotes) to keep it and teach it to the keyboard. Hold and slide along the space bar to move the cursor. Long-press a letter for accents. Use the 🌐 button under the keyboard to switch keyboards.</string>
+
     <string name="strip_downloading">Downloading %1$s → %2$s language pack…</string>
     <string name="strip_download_failed">Couldn\'t download the language pack. Open settings (⚙) to retry.</string>
     <string name="strip_translate_failed">Translation failed</string>
@@ -61,11 +73,4 @@
     <string name="mark_accent">\"%1$s\" needs an accent: %2$s</string>
     <string name="marks_before_send">Possible mistakes are marked. Fix them, or press ✓ again to use it as it is.</string>
     <string name="mark_no_fix">No suggestion. Tap ✕ to leave it.</string>
-
-    <string name="section_checking">4. Checking my %1$s</string>
-    <string name="mark_mistakes">Mark mistakes</string>
-    <string name="mark_mistakes_summary">Puts a red squiggly line under misspelt words and missing accents in the practice bar. Tap the word to see the fix. Works offline.</string>
-    <string name="grammar_check">Grammar check (online)</string>
-    <string name="grammar_check_summary">Also checks grammar, like gender agreement and verb forms (blue squiggly line), and explains each mistake. Sends the text in the practice bar to LanguageTool (languagetool.org) when you pause typing. Free, no account. Your friends\' translation isn\'t sent.</string>
-    <string name="grammar_unsupported">Grammar check isn\'t available for %1$s.</string>
 </resources>

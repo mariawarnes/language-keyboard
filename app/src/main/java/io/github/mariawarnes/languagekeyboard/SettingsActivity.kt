@@ -1,5 +1,6 @@
 package io.github.mariawarnes.languagekeyboard
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -42,6 +43,11 @@ class SettingsActivity : AppCompatActivity() {
     private var updatingSpinners = false
     private var downloading = false
 
+    /** Show this screen in the app language chosen in settings. */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -64,6 +70,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         fillLanguageLists()
+        setUpAppLanguage()
 
         val onChange = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
@@ -108,21 +115,46 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun inputMethodManager() = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
 
-    /** Language names are shown in your native language (the one messages get sent in). */
-    private fun name(code: String) = Languages.displayName(code, Prefs.outputLanguage(this))
+    /** Language names are shown in the app language. */
+    private fun name(code: String) = Languages.displayName(code, AppLocale.language(this))
+
+    /** The first setting: which language this app's own text is in. */
+    private fun setUpAppLanguage() {
+        val spinner = findViewById<Spinner>(R.id.app_language)
+        val codes = listOf("") + AppLocale.AVAILABLE
+        val labels = codes.map { code ->
+            if (code.isEmpty()) {
+                val auto = AppLocale.automatic(this)
+                getString(R.string.app_language_auto, Languages.displayName(auto, auto))
+            } else {
+                Languages.displayName(code, code) // each language in its own name: "Español"
+            }
+        }
+        spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
+        spinner.setSelection(codes.indexOf(Prefs.appLanguage(this)).coerceAtLeast(0), false)
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val code = codes[position]
+                if (code == Prefs.appLanguage(this@SettingsActivity)) return
+                Prefs.setAppLanguage(this@SettingsActivity, code)
+                recreate() // redraw everything in the new language
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+    }
 
     /** (Re)build both language lists, named and sorted in your native language. */
     private fun fillLanguageLists() {
-        val native = Prefs.outputLanguage(this)
-        namesLanguage = native
-        languages = Languages.all(native)
-        val names = languages.map { Languages.displayName(it, native) }
+        val appLanguage = AppLocale.language(this)
+        namesLanguage = appLanguage
+        languages = Languages.all(appLanguage)
+        val names = languages.map { Languages.displayName(it, appLanguage) }
         updatingSpinners = true
         for (spinner in listOf(typingSpinner, outputSpinner)) {
             spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, names)
         }
         typingSpinner.setSelection(indexOf(Prefs.typingLanguage(this)), false)
-        outputSpinner.setSelection(indexOf(native), false)
+        outputSpinner.setSelection(indexOf(Prefs.outputLanguage(this)), false)
         // Selection callbacks from the new adapters arrive after layout; ignore those.
         typingSpinner.post { updatingSpinners = false }
     }
@@ -138,9 +170,9 @@ class SettingsActivity : AppCompatActivity() {
         if (typing != Prefs.typingLanguage(this) || output != Prefs.outputLanguage(this)) {
             Prefs.setLanguages(this, typing, output)
         }
-        if (output != namesLanguage) {
-            // Your native language changed: show the language names in it.
-            typingSpinner.post { fillLanguageLists() }
+        if (AppLocale.language(this) != namesLanguage) {
+            // The app follows your language and that just changed: redraw in it.
+            typingSpinner.post { recreate() }
         }
         refreshModelStatus()
     }

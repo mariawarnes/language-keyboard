@@ -50,7 +50,7 @@ object Dictionaries {
     private val io: ExecutorService = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
 
-    // Keep the few most recently used lists in memory (typing language + friends' language).
+    // Keep the few most recently used lists in memory (the language you're learning + your own).
     private val loaded = object : LinkedHashMap<String, Dictionary>(4, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Dictionary>?) = size > 3
     }

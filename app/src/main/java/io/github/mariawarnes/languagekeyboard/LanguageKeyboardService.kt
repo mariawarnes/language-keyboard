@@ -1,5 +1,6 @@
 package io.github.mariawarnes.languagekeyboard
 
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.annotation.SuppressLint
@@ -15,7 +16,9 @@ import android.text.style.ForegroundColorSpan
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ContextThemeWrapper
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.ExtractedTextRequest
 import android.widget.HorizontalScrollView
@@ -41,6 +44,9 @@ class LanguageKeyboardService : InputMethodService(),
     SharedPreferences.OnSharedPreferenceChangeListener {
 
     private lateinit var engine: TranslationEngine
+
+    /** This service's context with resources in the app language chosen in settings. */
+    private lateinit var ui: Context
 
     // --- Direct mode: you type in your own language, the bar shows it in the one you're learning ---
 
@@ -201,7 +207,7 @@ class LanguageKeyboardService : InputMethodService(),
 
     /**
      * Whose keyboard layout to show: the language you're practising while translating, your
-     * friends' language when translation is off, and plain QWERTY for emails, URLs and passwords.
+     * own language in direct mode, and plain QWERTY for emails, URLs and passwords.
      */
     private val layoutLanguage: String
         get() = when {
@@ -214,6 +220,7 @@ class LanguageKeyboardService : InputMethodService(),
 
     override fun onCreate() {
         super.onCreate()
+        ui = AppLocale.wrap(this)
         engine = TranslationEngine(this)
         previewEngine = TranslationEngine(previewListener)
         translateEnabled = Prefs.translateEnabled(this)
@@ -231,7 +238,9 @@ class LanguageKeyboardService : InputMethodService(),
     }
 
     override fun onCreateInputView(): View {
-        val root = layoutInflater.inflate(R.layout.input_view, null)
+        // Inflated with the app-language resources (and the system keyboard theme).
+        val inflater = LayoutInflater.from(ContextThemeWrapper(ui, android.R.style.Theme_DeviceDefault_InputMethod))
+        val root = inflater.inflate(R.layout.input_view, null)
         keyboardView = root.findViewById<KeyboardView>(R.id.keyboard).also { it.listener = this }
         languageToggle = root.findViewById<View>(R.id.language_toggle).also { it.setOnClickListener { toggleTranslation() } }
         toggleLearning = root.findViewById<TextView>(R.id.toggle_learning).also {
@@ -331,7 +340,9 @@ class LanguageKeyboardService : InputMethodService(),
                 explanationTranslations.clear()
                 lockInPhrase()
                 configureEngine()
+                applyAppLanguage() // "Same as my language" may have changed
             }
+            Prefs.KEY_APP_LANGUAGE -> applyAppLanguage()
             Prefs.KEY_TRANSLATE_ENABLED -> translateEnabled = Prefs.translateEnabled(this)
             Prefs.KEY_GESTURE_TYPING, Prefs.KEY_SUGGESTIONS, Prefs.KEY_AUTOCORRECT -> {
                 readTypingOptions()
@@ -344,6 +355,14 @@ class LanguageKeyboardService : InputMethodService(),
             }
         }
         refreshUi()
+    }
+
+    /** Rebuild the keyboard's views in the (possibly new) app language. */
+    private fun applyAppLanguage() {
+        val language = AppLocale.language(this)
+        if (ui.resources.configuration.locales[0].language == java.util.Locale.forLanguageTag(language).language) return
+        ui = AppLocale.wrap(this)
+        if (keyboardView != null) setInputView(onCreateInputView())
     }
 
     private fun readTypingOptions() {
@@ -518,7 +537,7 @@ class LanguageKeyboardService : InputMethodService(),
                 // Give a chance to fix marked mistakes first; pressing ✓ again sends anyway.
                 warnedBeforeLockIn = true
                 selectedMark = marks.first()
-                statusMessage = getString(R.string.marks_before_send)
+                statusMessage = ui.getString(R.string.marks_before_send)
                 refreshUi()
                 return
             }
@@ -610,7 +629,7 @@ class LanguageKeyboardService : InputMethodService(),
         if (request.session != session) return
         Log.w(TAG, "Translation failed", error)
         commitPending = false
-        statusMessage = getString(R.string.strip_translate_failed)
+        statusMessage = ui.getString(R.string.strip_translate_failed)
         refreshUi()
     }
 
@@ -832,14 +851,14 @@ class LanguageKeyboardService : InputMethodService(),
             val secondary = ContextCompat.getColor(this, R.color.strip_text_secondary)
             val primary = ContextCompat.getColor(this, R.color.strip_text)
             val message: String? = when {
-                fieldBlocked -> getString(R.string.strip_no_translate_field)
+                fieldBlocked -> ui.getString(R.string.strip_no_translate_field)
                 !active && previewSource.isEmpty() ->
-                    if (fieldIsAddress) getString(R.string.strip_address_field, Languages.shortLabel(typing))
+                    if (fieldIsAddress) ui.getString(R.string.strip_address_field, Languages.shortLabel(typing))
                     else Languages.typeInHint(output)
                 !active -> null
                 engine.state == TranslationEngine.State.DOWNLOADING ->
-                    getString(R.string.strip_downloading, name(typing), name(output))
-                engine.state == TranslationEngine.State.DOWNLOAD_FAILED -> getString(R.string.strip_download_failed)
+                    ui.getString(R.string.strip_downloading, name(typing), name(output))
+                engine.state == TranslationEngine.State.DOWNLOAD_FAILED -> ui.getString(R.string.strip_download_failed)
                 else -> statusMessage
             }
             val marks = visibleMarks()
@@ -949,7 +968,7 @@ class LanguageKeyboardService : InputMethodService(),
     }
 
     /** Language names are shown in your own (native) language, not the phone's. */
-    private fun name(code: String) = Languages.displayName(code, Prefs.outputLanguage(this))
+    private fun name(code: String) = Languages.displayName(code, AppLocale.language(this))
 
     /** Grammar explanations, translated into your own language (original -> translation). */
     private val explanationTranslations = HashMap<String, String>()
@@ -1098,14 +1117,14 @@ class LanguageKeyboardService : InputMethodService(),
         panel.visibility = View.VISIBLE
         val languageName = name(Prefs.typingLanguage(this))
         correctionMessage?.text = when (mark.kind) {
-            MarkKind.ACCENT -> getString(R.string.mark_accent, mark.original, mark.replacements.firstOrNull().orEmpty())
+            MarkKind.ACCENT -> ui.getString(R.string.mark_accent, mark.original, mark.replacements.firstOrNull().orEmpty())
             MarkKind.SPELLING -> mark.message?.let { explanation(it) } ?: if (mark.replacements.isNotEmpty()) {
-                getString(R.string.mark_spelling_fix, mark.original)
+                ui.getString(R.string.mark_spelling_fix, mark.original)
             } else {
-                getString(R.string.mark_spelling, mark.original, languageName)
+                ui.getString(R.string.mark_spelling, mark.original, languageName)
             }
             MarkKind.GRAMMAR -> explanation(mark.message.orEmpty()) +
-                if (mark.replacements.isEmpty()) "\n" + getString(R.string.mark_no_fix) else ""
+                if (mark.replacements.isEmpty()) "\n" + ui.getString(R.string.mark_no_fix) else ""
         }
         correctionFixes.forEachIndexed { i, view ->
             val fix = mark.replacements.getOrNull(i)
@@ -1224,7 +1243,7 @@ class LanguageKeyboardService : InputMethodService(),
         val dict = dictionary
         if (dict == null) {
             val loading = Dictionaries.isLoading(layoutLanguage)
-            showSlots(listOf(null, if (loading) Slot(getString(R.string.suggestions_loading), SlotKind.INFO) else null, null))
+            showSlots(listOf(null, if (loading) Slot(ui.getString(R.string.suggestions_loading), SlotKind.INFO) else null, null))
             return
         }
         val word = currentWord()

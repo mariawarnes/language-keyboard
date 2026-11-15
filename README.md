@@ -1,13 +1,13 @@
 # Language Keyboard
 
-An Android keyboard for practising a language while chatting with friends who speak a different one.
+An Android keyboard for practising a language in everyday typing — chats, searches, anything — while what you send stays in your own language.
 
 You **type in the language you're learning**. A small bar above the keys shows what you typed, and the
-text box receives the **translation into your friends' language**, updated live as you type.
+text box receives the **translation into your own language**, updated live as you type.
 
 ```
 ┌──────────────────────────────────────────────┐
-│ Chat app text box:  "I'm going to the beach" │  ← your friends' language
+│ App's text box:     "I'm going to the beach" │  ← your language
 ├──────────────────────────────────────────────┤
 │ [ES|EN]  Voy a la playa|           ✕   ⚙     │  ← what you typed (practice bar)
 │  q  w  e  r  t  y  u  i  o  p                │
@@ -30,12 +30,12 @@ text box receives the **translation into your friends' language**, updated live 
 - **✕** removes the current phrase from the text box.
 - The **ES | EN** switch above the keys shows which language you're typing in (the highlighted half); tap the
   other half to change:
-  - **ES — practice mode:** you type in the language you're learning; your friends get it in theirs.
+  - **ES — practice mode:** you type in the language you're learning; the app gets it in your language.
   - **EN — direct mode:** you type in your own language straight into the app, and the bar above the keys
     shows it live in the language you're learning, so you still pick some up.
 - Password, email, URL and number fields are never translated (and use a plain QWERTY layout).
 - **The keys follow the language you're typing in.** With translation on, you get the layout of the language
-  you're practising; in direct mode, your friends' language's layout. See the list below.
+  you're practising; in direct mode, your own language's layout. See the list below.
 - **Gesture typing, suggestions and autocorrect** (each can be switched off in settings) work in whichever
   language you're typing:
   - Suggestions ignore accents, so `cancion` offers `canción` and `esta` also offers `está` — handy when learning.
@@ -66,10 +66,12 @@ The app isn't on the Play Store. Every push builds it and publishes the APK as t
 2. Open the downloaded file. Android will ask you to allow installing apps from that source. If Play Protect
    warns about it, choose **More details → Install anyway**.
 3. Open **Language Keyboard** and follow the steps on screen:
-   1. Enable the keyboard in system settings, then switch to it.
-   2. Choose the language you type in and the language it gets sent in, then tap **Download language packs**
-      (Wi-Fi recommended).
-   3. Try it in the test box.
+   1. Pick the language for the app's own text (settings and keyboard messages): English, Español, Français,
+      Deutsch, Italiano or Português — by default it follows *My language*.
+   2. Enable the keyboard in system settings, then switch to it.
+   3. Choose the **language you're learning** and **your language** (what gets sent), then tap
+      **Download language packs** (Wi-Fi recommended).
+   4. Try it in the test box.
 
 Later builds install as updates over the previous one (they're all signed with the same key), keeping your settings.
 
