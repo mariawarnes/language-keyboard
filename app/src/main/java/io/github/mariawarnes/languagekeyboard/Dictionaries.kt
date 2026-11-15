@@ -28,7 +28,7 @@ object Dictionaries {
     private val FIFTY_K = setOf(
         "sq", "ar", "bg", "ca", "hr", "cs", "da", "nl", "en", "et", "fi", "fr", "gl", "ka", "de", "el", "he",
         "hu", "is", "id", "it", "lt", "lv", "mk", "ms", "no", "fa", "pl", "ro", "ru", "sk", "sl", "es", "sv",
-        "tr", "uk", "vi",
+        "tr", "uk", "vi", "ko", "bn",
     )
 
     /** Smaller languages that only have a full list upstream (we keep the top 50k). */
@@ -36,6 +36,7 @@ object Dictionaries {
 
     private fun sourcePath(language: String): String? = when (language) {
         "pt" -> "pt_br/pt_br_50k.txt" // Brazilian Portuguese has far more data
+        "zh" -> "zh_cn/zh_cn_50k.txt" // Simplified Chinese, for pinyin conversion
         in FIFTY_K -> "$language/${language}_50k.txt"
         in FULL_ONLY -> "$language/${language}_full.txt"
         else -> null
@@ -63,6 +64,57 @@ object Dictionaries {
     fun cached(language: String): Dictionary? = loaded[language]
 
     fun isLoading(language: String): Boolean = language in pending
+
+    // --- Japanese kana → kanji (SKK dictionary) ---------------------------------------------
+
+    /**
+     * SKK-JISYO.M from the SKK project (https://github.com/skk-dev/dict, GPL-2.0-or-later):
+     * readings in hiragana → kanji, about 140 KB, downloaded once like the word lists.
+     */
+    private const val SKK_URL = "https://raw.githubusercontent.com/skk-dev/dict/master/SKK-JISYO.M"
+    private var kanji: Map<String, List<String>>? = null
+    private var kanjiPending: MutableList<(Map<String, List<String>>?) -> Unit>? = null
+
+    fun isKanjiLoading(): Boolean = kanjiPending != null
+
+    fun loadKanji(context: Context, callback: (Map<String, List<String>>?) -> Unit) {
+        kanji?.let { callback(it); return }
+        kanjiPending?.let { it += callback; return }
+        kanjiPending = mutableListOf(callback)
+        val appContext = context.applicationContext
+        io.execute {
+            val result = try {
+                val f = File(File(appContext.filesDir, "dictionaries"), "ja-skk.txt")
+                if (!f.exists()) {
+                    f.parentFile?.mkdirs()
+                    val connection = URL(SKK_URL).openConnection() as HttpURLConnection
+                    connection.connectTimeout = 15_000
+                    connection.readTimeout = 30_000
+                    try {
+                        if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+                            throw IllegalStateException("HTTP ${connection.responseCode}")
+                        }
+                        val temp = File(f.parentFile, "ja-skk.part")
+                        connection.inputStream.use { input -> temp.outputStream().use { input.copyTo(it) } }
+                        if (!temp.renameTo(f)) throw IllegalStateException("Couldn't save SKK dictionary")
+                    } finally {
+                        connection.disconnect()
+                    }
+                }
+                f.inputStream().bufferedReader(java.nio.charset.Charset.forName("EUC-JP")).useLines {
+                    JapaneseConverter.parseSkk(it)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Couldn't load the Japanese dictionary", e)
+                null
+            }
+            main.post {
+                if (result != null) kanji = result
+                kanjiPending?.forEach { it(result) }
+                kanjiPending = null
+            }
+        }
+    }
 
     /** Load [language], downloading it first if needed and [download] is true. */
     fun load(context: Context, language: String, download: Boolean, callback: (Dictionary?) -> Unit) {

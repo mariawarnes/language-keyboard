@@ -186,6 +186,7 @@ class KeyboardView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         for (pk in placed) drawKey(canvas, pk)
         popup?.let { drawPopup(canvas, it) }
+        pressedKey?.takeIf { it.key.flicks != null && popup == null }?.let { drawFlick(canvas, it) }
         if (gesturing && gestureXs.size > 1) {
             trail.rewind()
             trail.moveTo(gestureXs[0], gestureYs[0])
@@ -350,6 +351,66 @@ class KeyboardView @JvmOverloads constructor(
         canvas.restore()
     }
 
+    // --- Japanese flick keys ----------------------------------------------------------------
+
+    private fun updateFlick(x: Float, y: Float) {
+        val dx = x - downX
+        val dy = y - downY
+        val direction = when {
+            hypot(dx, dy) < unitWidth * 0.3f -> 0
+            abs(dx) > abs(dy) -> if (dx < 0) 1 else 3
+            else -> if (dy < 0) 2 else 4
+        }
+        if (direction != flickDirection) {
+            flickDirection = direction
+            invalidate()
+        }
+    }
+
+    /** While a flick key is held: its other kana around the key, and the chosen one enlarged. */
+    private fun drawFlick(canvas: Canvas, pk: PlacedKey) {
+        val flicks = pk.key.flicks ?: return
+        val face = pk.face
+        val w = face.width()
+        val h = face.height()
+        // Small hints of the four directions on the key itself.
+        hintPaint.textAlign = Paint.Align.CENTER
+        hintPaint.textSize = sp(12f)
+        val inset = dp(9f)
+        val spots = listOf(
+            null,
+            face.left + inset to face.centerY(),
+            face.centerX() to face.top + inset,
+            face.right - inset to face.centerY(),
+            face.centerX() to face.bottom - inset / 2,
+        )
+        for (d in 1..4) {
+            val (hx, hy) = spots[d] ?: continue
+            if (flicks[d].isEmpty()) continue
+            canvas.drawText(flicks[d], hx, hy + hintPaint.textSize / 3, hintPaint)
+        }
+        hintPaint.textAlign = Paint.Align.RIGHT
+        hintPaint.textSize = sp(10f)
+        // A balloon with the chosen kana, out in the flick direction.
+        val chosen = flicks[flickDirection].ifEmpty { flicks[0] }
+        val (bx, by) = when (flickDirection) {
+            1 -> face.left - w to face.top
+            2 -> face.left to face.top - h
+            3 -> face.right to face.top
+            4 -> face.left to face.bottom
+            else -> face.left to face.top - h
+        }
+        val left = bx.coerceIn(padSide, width - padSide - w)
+        val top = by.coerceIn(0f, height - h)
+        canvas.drawRoundRect(left, top + dp(2f), left + w, top + h + dp(2f), corner, corner, shadowPaint)
+        keyPaint.color = colorPopupSelected
+        canvas.drawRoundRect(left, top, left + w, top + h, corner, corner, keyPaint)
+        textPaint.color = colorTextOnAccent
+        textPaint.textSize = sp(26f)
+        val baseline = top + h / 2 - (textPaint.descent() + textPaint.ascent()) / 2
+        canvas.drawText(chosen, left + w / 2, baseline, textPaint)
+    }
+
     // --- Long-press popup -------------------------------------------------------------------
 
     /**
@@ -440,6 +501,9 @@ class KeyboardView @JvmOverloads constructor(
 
     // Space-bar cursor control
     private var cursorSliding = false
+
+    /** Japanese flick keys: 0 = tap (centre), 1 = left, 2 = up, 3 = right, 4 = down. */
+    private var flickDirection = 0
     private var cursorAnchorX = 0f
     private var edgeDirection = 0
     private var edgeStartTime = 0L
@@ -544,6 +608,10 @@ class KeyboardView @JvmOverloads constructor(
             updatePopupSelection(x, y)
             return
         }
+        if (pressedKey?.key?.flicks != null) {
+            updateFlick(x, y)
+            return
+        }
         if (pressedKey?.key?.code == Codes.SPACE && !longPressFired) {
             slideOnSpace(x)
             return
@@ -617,6 +685,12 @@ class KeyboardView @JvmOverloads constructor(
             resetTouch() // the slide moved the cursor; don't type a space
             return
         }
+        val flicks = pressedKey?.key?.flicks
+        if (flicks != null) {
+            if (commit) listener?.onText(flicks[flickDirection].ifEmpty { flicks[0] })
+            resetTouch()
+            return
+        }
         keyHandler.removeCallbacks(longPressRunnable)
         keyHandler.removeCallbacks(repeatRunnable)
         if (gesturing) {
@@ -646,6 +720,7 @@ class KeyboardView @JvmOverloads constructor(
         gesturing = false
         gestureXs.clear(); gestureYs.clear()
         cursorSliding = false
+        flickDirection = 0
         edgeDirection = 0
         keyHandler.removeCallbacks(edgeRepeat)
         invalidate()

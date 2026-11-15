@@ -13,6 +13,9 @@ object Codes {
     const val MODE_LETTERS = -5
     const val MODE_SYMBOLS = -6
     const val MODE_SYMBOLS_2 = -7
+
+    /** Japanese: make the last kana small / voiced (は → ば → ぱ, つ → っ → づ). */
+    const val KANA_MODIFY = -8
 }
 
 /**
@@ -28,6 +31,8 @@ data class Key(
     val hint: String? = null,
     val style: KeyStyle = KeyStyle.NORMAL,
     val repeatable: Boolean = false,
+    /** Japanese flick keys: [center, left, up, right, down] ("" = nothing that way). */
+    val flicks: List<String>? = null,
 ) {
     /** Letters change case with shift; everything else stays as it is. */
     val isLetter: Boolean get() = text != null && text.length == 1 && text[0].isLetter()
@@ -65,12 +70,14 @@ object KeyboardLayouts {
 
     // --- Letters ----------------------------------------------------------------------------
 
-    private fun letters(spec: LayoutSpec): List<List<Key>> {
-        val rows = spec.rows.map(::split)
-        val fnCount = if (spec.cased) 2 else 1
-        val third = rows[2]
-        val total = maxOf(rows[0].size, rows[1].size, third.size + fnCount, 10).toFloat()
-        val fnWidth = ((total - third.size) / fnCount).coerceIn(1f, 1.5f)
+    private fun letters(spec: LayoutSpec, shifted: Boolean): List<List<Key>> {
+        if (spec.kana12) return japaneseKana()
+        val rows = (if (shifted && spec.shiftRows != null) spec.shiftRows else spec.rows).map(::split)
+        val hasShift = spec.cased || spec.shiftRows != null
+        val fnCount = if (hasShift) 2 else 1
+        val last = rows.last()
+        val total = maxOf(rows.dropLast(1).maxOfOrNull { it.size } ?: 0, last.size + fnCount, 10).toFloat()
+        val fnWidth = ((total - last.size) / fnCount).coerceIn(1f, 1.5f)
 
         fun letter(c: String, digitIndex: Int? = null): Key {
             val own = spec.alternates[c] ?: if (spec.latin) LanguageLayouts.LATIN_ALTERNATES[c] else null
@@ -82,19 +89,51 @@ object KeyboardLayouts {
             return Key(c, alternates = digits + alternates, hint = digit)
         }
 
-        val row1 = rows[0].mapIndexed { i, c -> letter(c, i) }
-        val row2 = rows[1].map { letter(it) }
-        val row3 = buildList {
-            if (spec.cased) add(shift(fnWidth))
-            addAll(third.map { letter(it) })
+        val result = ArrayList<List<Key>>()
+        rows.dropLast(1).forEachIndexed { r, row ->
+            result += row.mapIndexed { i, c -> letter(c, if (r == 0) i else null) }
+        }
+        result += buildList {
+            if (hasShift) add(shift(fnWidth))
+            addAll(last.mapIndexed { i, c -> letter(c, if (rows.size == 1) i else null) })
             add(delete(fnWidth))
         }
-        val bottom = bottomRow(
+        result += bottomRow(
             total, modeKey("?123", Codes.MODE_SYMBOLS),
             spec.comma, spec.commaAlternates, spec.periodAlternates,
         )
-        return listOf(row1, row2, row3, bottom)
+        return result
     }
+
+    // --- Japanese 12-key kana pad ---------------------------------------------------------------
+
+    /** Tap for the first kana; flick left / up / right / down for the others in its row. */
+    private fun flick(center: String, others: String): Key {
+        val rest = split(others).map { if (it == "_") "" else it }
+        return Key(center, flicks = listOf(center) + rest + List(4 - rest.size) { "" })
+    }
+
+    private fun japaneseKana(): List<List<Key>> = listOf(
+        listOf(
+            flick("ー", "～ … ・ _"), flick("あ", "い う え お"), flick("か", "き く け こ"),
+            flick("さ", "し す せ そ"), delete(1f),
+        ),
+        listOf(
+            flick("「", "『 （ 」 』"), flick("た", "ち つ て と"), flick("な", "に ぬ ね の"),
+            flick("は", "ひ ふ へ ほ"), flick("？", "！ ～ … _"),
+        ),
+        listOf(
+            Key("?123", text = null, code = Codes.MODE_SYMBOLS, style = KeyStyle.FUNCTION),
+            flick("ま", "み む め も"), flick("や", "「 ゆ 」 よ"), flick("ら", "り る れ ろ"),
+            Key("", text = null, code = Codes.SPACE),
+        ),
+        listOf(
+            flick("、", "， ・ _ _"),
+            Key("小゛゜", text = null, code = Codes.KANA_MODIFY, style = KeyStyle.FUNCTION),
+            flick("わ", "を ん ー _"), flick("。", "． _ _ _"),
+            Key("⏎", text = null, code = Codes.ENTER, style = KeyStyle.ACCENT),
+        ),
+    )
 
     // --- Symbols ----------------------------------------------------------------------------
 
@@ -136,13 +175,16 @@ object KeyboardLayouts {
     // Built once per language and mode, so the keyboard view can tell when the layout really changed.
     private val cache = HashMap<String, List<List<Key>>>()
 
-    fun forMode(mode: KeyboardMode, language: String): List<List<Key>> =
-        cache.getOrPut("$mode/$language") {
-            val spec = LanguageLayouts.forLanguage(language)
+    /** [shifted] picks the Shift page for scripts that have one (Thai, Indian scripts, Korean). */
+    fun forMode(mode: KeyboardMode, language: String, shifted: Boolean = false): List<List<Key>> {
+        val spec = LanguageLayouts.forLanguage(language)
+        val page = shifted && mode == KeyboardMode.LETTERS && spec.shiftRows != null
+        return cache.getOrPut("$mode/$language/$page") {
             when (mode) {
-                KeyboardMode.LETTERS -> letters(spec)
+                KeyboardMode.LETTERS -> letters(spec, page)
                 KeyboardMode.SYMBOLS -> symbols(spec)
                 KeyboardMode.SYMBOLS_2 -> symbols2(spec)
             }
         }
+    }
 }

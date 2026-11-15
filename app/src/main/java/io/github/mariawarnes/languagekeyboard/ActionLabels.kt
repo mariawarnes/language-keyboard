@@ -58,6 +58,17 @@ object ActionLabels {
         "ht" to listOf("Ale", "Pwochen", "Fini", "Anvan"),
         "eo" to listOf("Iru", "Sekva", "Farite", "Antaŭa"),
         "mt" to listOf("Mur", "Li jmiss", "Lest", "Lura"),
+        "ja" to listOf("実行", "次へ", "完了", "前へ"),
+        "zh" to listOf("前往", "下一步", "完成", "上一步"),
+        "ko" to listOf("이동", "다음", "완료", "이전"),
+        "th" to listOf("ไป", "ถัดไป", "เสร็จ", "ก่อนหน้า"),
+        "hi" to listOf("जाएँ", "आगे", "हो गया", "पीछे"),
+        "mr" to listOf("जा", "पुढे", "झाले", "मागे"),
+        "bn" to listOf("যান", "পরবর্তী", "সম্পন্ন", "পূর্ববর্তী"),
+        "gu" to listOf("જાઓ", "આગળ", "થઈ ગયું", "પાછળ"),
+        "kn" to listOf("ಹೋಗಿ", "ಮುಂದೆ", "ಮುಗಿದಿದೆ", "ಹಿಂದೆ"),
+        "ta" to listOf("செல்", "அடுத்து", "முடிந்தது", "முந்தைய"),
+        "te" to listOf("వెళ్ళు", "తదుపరి", "పూర్తయింది", "మునుపటి"),
     )
 
     /** The label in [language], or English if we don't have that language. */

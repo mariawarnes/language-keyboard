@@ -58,6 +58,8 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     // On-device translation. Language packs (~30 MB each) are downloaded once, then work offline.
     implementation("com.google.mlkit:translate:17.0.3")
+    // Chinese characters → pinyin, to build the pinyin input index (BSD licence).
+    implementation("com.belerweb:pinyin4j:2.5.1")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")

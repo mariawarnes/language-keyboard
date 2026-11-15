@@ -29,6 +29,7 @@ object LanguageTool {
         "es" to "es", "fr" to "fr", "it" to "it", "nl" to "nl", "pl" to "pl", "ru" to "ru", "uk" to "uk",
         "sv" to "sv", "da" to "da", "el" to "el", "gl" to "gl", "ro" to "ro", "sk" to "sk", "sl" to "sl",
         "be" to "be", "ar" to "ar", "fa" to "fa", "ga" to "ga", "eo" to "eo", "tl" to "tl",
+        "ja" to "ja-JP", "zh" to "zh-CN", "ta" to "ta",
     )
 
     fun isSupported(language: String): Boolean = language in CODES

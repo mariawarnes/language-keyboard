@@ -146,8 +146,20 @@ class LanguageKeyboardService : InputMethodService(),
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    private enum class SlotKind { VERBATIM, WORD, GESTURE, INFO }
-    private class Slot(val text: String, val kind: SlotKind, val emphasised: Boolean = false)
+    private enum class SlotKind { VERBATIM, WORD, GESTURE, INFO, CONVERT }
+    private class Slot(
+        val text: String, val kind: SlotKind, val emphasised: Boolean = false,
+        val candidate: Candidate? = null,
+    )
+
+    /** Japanese / Chinese: turns kana or pinyin into characters, once its data has loaded. */
+    private var converter: Converter? = null
+    private var converterLanguage: String? = null
+
+    private val spec: LayoutSpec get() = LanguageLayouts.forLanguage(layoutLanguage)
+
+    /** Word-based aids (autocorrect, spelling marks, gestures) need words separated by spaces. */
+    private val wordAids: Boolean get() = spec.let { it.spaced && it.converter == null && !it.hangul }
 
     // --- Checking the practice text ---------------------------------------------------------
 
@@ -421,7 +433,15 @@ class LanguageKeyboardService : InputMethodService(),
     override fun onText(text: String) {
         var spaced = false
         var undo: AutocorrectUndo? = null
+        val hangulJamo = spec.hangul && text.length == 1 && Hangul.isJamo(text[0])
         when {
+            // Korean: jamo join the syllable before the cursor (ㅎ + ㅏ → 하).
+            hangulJamo -> {
+                val (replace, insert) = Hangul.type(textBefore().lastOrNull(), text[0])
+                replaceBefore(replace, insert)
+            }
+            // Japanese / Chinese: space picks the first conversion, like their usual keyboards.
+            text == " " && convertFirst() -> Unit
             // The space after a picked suggestion is already there.
             autoSpaced && text == " " -> Unit
             // "word |" + "." -> "word. |"
@@ -429,7 +449,7 @@ class LanguageKeyboardService : InputMethodService(),
                 replaceBefore(1, "$text ")
                 spaced = true
             }
-            (text == " " || text in PUNCTUATION) && autocorrectEnabled && dictionary != null -> {
+            (text == " " || text in PUNCTUATION) && autocorrectEnabled && dictionary != null && wordAids -> {
                 undo = autocorrect(text)
                 if (undo == null) insert(text)
             }
@@ -502,7 +522,25 @@ class LanguageKeyboardService : InputMethodService(),
             Codes.MODE_LETTERS -> setMode(KeyboardMode.LETTERS)
             Codes.MODE_SYMBOLS -> setMode(KeyboardMode.SYMBOLS)
             Codes.MODE_SYMBOLS_2 -> setMode(KeyboardMode.SYMBOLS_2)
+            Codes.KANA_MODIFY -> modifyKana()
         }
+    }
+
+    /** Japanese 小゛゜: the kana before the cursor cycles through its small / voiced forms. */
+    private fun modifyKana() {
+        val prev = textBefore().lastOrNull() ?: return
+        val next = Kana.nextForm(prev) ?: return
+        replaceBefore(1, next.toString())
+        updateSuggestions()
+    }
+
+    /** Space in Japanese / Chinese: apply the first conversion, if there is one. */
+    private fun convertFirst(): Boolean {
+        val c = converter?.candidates(textBefore(), 3)?.firstOrNull() ?: return false
+        // Japanese: space converts to kanji, never just to katakana (that's a tap on the bar).
+        if (spec.converter == "ja" && c.insert.all { it in '\u30A0'..'\u30FF' }) return false
+        replaceBefore(c.remove, c.insert)
+        return true
     }
 
     private fun onDelete() {
@@ -518,6 +556,9 @@ class LanguageKeyboardService : InputMethodService(),
         } else if (swiped != null && before.endsWith(swiped)) {
             // Backspace straight after a swipe removes the whole word.
             replaceBefore(swiped.length, "")
+        } else if (spec.hangul && textBefore().lastOrNull()?.let { Hangul.removeLast(it) } != null) {
+            // Korean: backspace takes the last jamo off the syllable (한 → 하).
+            replaceBefore(1, Hangul.removeLast(textBefore().last())!!)
         } else if (translationActive && buffer.isNotEmpty()) {
             if (cursor > 0) {
                 val cut = buffer.offsetByCodePoints(cursor, -1)
@@ -567,6 +608,14 @@ class LanguageKeyboardService : InputMethodService(),
         }
         lastShiftTap = now
         keyboardView?.shiftState = shiftState
+        syncRows()
+    }
+
+    /** The keys for the current mode, language and (for Thai / Indian / Korean) Shift page. */
+    private fun currentRows() = KeyboardLayouts.forMode(mode, layoutLanguage, shifted = shiftState != ShiftState.OFF)
+
+    private fun syncRows() {
+        keyboardView?.rows = currentRows()
     }
 
     private fun setMode(newMode: KeyboardMode) {
@@ -581,8 +630,11 @@ class LanguageKeyboardService : InputMethodService(),
             return
         }
         if (!LanguageLayouts.forLanguage(layoutLanguage).cased) {
-            shiftState = ShiftState.OFF
+            // No capitals to add automatically. Scripts with a Shift page (Thai, Indian, Korean)
+            // keep whatever Shift is set to; typing a letter turns a one-shot Shift off in onText.
+            if (LanguageLayouts.forLanguage(layoutLanguage).shiftRows == null) shiftState = ShiftState.OFF
             keyboardView?.shiftState = shiftState
+            syncRows()
             return
         }
         val info = currentInputEditorInfo
@@ -599,6 +651,7 @@ class LanguageKeyboardService : InputMethodService(),
         }
         shiftState = if (cap) ShiftState.ONE_SHOT else ShiftState.OFF
         keyboardView?.shiftState = shiftState
+        syncRows()
     }
 
     // --- Translation ------------------------------------------------------------------------
@@ -807,12 +860,12 @@ class LanguageKeyboardService : InputMethodService(),
         ensureDictionary()
         keyboardView?.let { kv ->
             val language = layoutLanguage
-            kv.rows = KeyboardLayouts.forMode(mode, language)
-            kv.gestureEnabled = gestureEnabled && dictionary != null && mode == KeyboardMode.LETTERS
+            kv.rows = currentRows()
+            kv.gestureEnabled = gestureEnabled && dictionary != null && mode == KeyboardMode.LETTERS && wordAids
             kv.caseLocale = Locale.forLanguageTag(language)
             kv.shiftState = shiftState
             kv.enterLabel = if (active && buffer.isNotEmpty()) "✓" else enterLabelFor(currentInputEditorInfo)
-            kv.spaceLabel = if (active) "${name(typing)} → ${name(output)}"
+            kv.spaceLabel = if (spec.kana12) "空白" else if (active) "${name(typing)} → ${name(output)}"
             else name(language)
         }
 
@@ -1025,7 +1078,7 @@ class LanguageKeyboardService : InputMethodService(),
         if (!translationActive || buffer.isBlank()) return
         val text = buffer.toString()
         val dict = dictionary
-        if (markMistakes && dict != null) {
+        if (markMistakes && dict != null && wordAids) {
             val request = ++markRequest
             val cursorAt = cursor
             val taught = userWords
@@ -1175,7 +1228,9 @@ class LanguageKeyboardService : InputMethodService(),
     /** Make sure the word list for the language being typed is loaded (downloading it once). */
     private fun ensureDictionary() {
         val language = layoutLanguage
-        val wanted = fieldAllowsTranslation && (suggestionsEnabled || autocorrectEnabled || gestureEnabled) &&
+        ensureConverter()
+        val wanted = fieldAllowsTranslation &&
+            (suggestionsEnabled || autocorrectEnabled || gestureEnabled || spec.converter != null) &&
             Dictionaries.isSupported(language)
         if (!wanted) {
             dictionary = null
@@ -1195,6 +1250,46 @@ class LanguageKeyboardService : InputMethodService(),
                     refreshUi()
                 } else {
                     updateSuggestions()
+                }
+            }
+        }
+    }
+
+    /** Japanese loads its kana → kanji dictionary; Chinese builds pinyin from its word list. */
+    private fun ensureConverter() {
+        val kind = spec.converter
+        if (kind == null || !fieldAllowsTranslation) {
+            converter = null
+            converterLanguage = null
+            return
+        }
+        if (converterLanguage == kind && converter != null) return
+        when (kind) {
+            "ja" -> if (!Dictionaries.isKanjiLoading()) {
+                Dictionaries.loadKanji(this) { readings ->
+                    if (readings != null && spec.converter == "ja") {
+                        converter = JapaneseConverter(readings)
+                        converterLanguage = "ja"
+                        updateSuggestions()
+                    }
+                }
+            }
+            "zh" -> {
+                val dict = dictionary?.takeIf { it.language == "zh" } ?: return // once the word list loads
+                if (converterLanguage == "zh-building") return
+                converter = null
+                converterLanguage = "zh-building"
+                Dictionaries.worker.execute {
+                    val built = PinyinConverter(dict)
+                    mainHandler.post {
+                        if (spec.converter == "zh") {
+                            converter = built
+                            converterLanguage = "zh"
+                            updateSuggestions()
+                        } else {
+                            converterLanguage = null
+                        }
+                    }
                 }
             }
         }
@@ -1235,10 +1330,29 @@ class LanguageKeyboardService : InputMethodService(),
 
     private fun updateSuggestions() {
         val bar = suggestionBar ?: return
-        val visible = suggestionsEnabled && fieldAllowsTranslation && Dictionaries.isSupported(layoutLanguage) &&
-            selectedMark == null
+        val converting = spec.converter != null
+        val visible = fieldAllowsTranslation && selectedMark == null &&
+            (converting || (suggestionsEnabled && Dictionaries.isSupported(layoutLanguage)))
         bar.visibility = if (visible) View.VISIBLE else View.GONE
         if (!visible) return
+
+        if (converting) {
+            val conv = converter
+            if (conv == null) {
+                if (spec.converter == "zh") ensureConverter()
+                val loading = Dictionaries.isKanjiLoading() || Dictionaries.isLoading(layoutLanguage) ||
+                    converterLanguage == "zh-building"
+                showSlots(listOf(null, if (loading) Slot(ui.getString(R.string.suggestions_loading), SlotKind.INFO) else null, null))
+                return
+            }
+            val found = conv.candidates(textBefore(), 3)
+            showSlots(listOf(
+                found.getOrNull(1)?.let { Slot(it.label, SlotKind.CONVERT, candidate = it) },
+                found.getOrNull(0)?.let { Slot(it.label, SlotKind.CONVERT, emphasised = true, candidate = it) },
+                found.getOrNull(2)?.let { Slot(it.label, SlotKind.CONVERT, candidate = it) },
+            ))
+            return
+        }
 
         gestureWords?.let { words ->
             showSlots(listOf(
@@ -1313,6 +1427,10 @@ class LanguageKeyboardService : InputMethodService(),
 
     private fun pickSuggestion(slot: Slot) {
         when (slot.kind) {
+            SlotKind.CONVERT -> {
+                val c = slot.candidate ?: return
+                replaceBefore(c.remove, c.insert)
+            }
             SlotKind.GESTURE -> {
                 // Swap the swiped word for another guess.
                 val words = gestureWords ?: return

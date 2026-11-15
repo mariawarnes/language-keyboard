@@ -105,17 +105,25 @@ Or open the folder in Android Studio and press Run.
 | Greek | Greek |
 | Hebrew, Arabic, Persian, Urdu (phonetic) | Hebrew, Arabic, Persian, Urdu |
 | Georgian | Georgian |
+| Thai Kedmanee (with Shift page) | Thai |
+| InScript (with Shift page) | Hindi, Marathi, Bengali, Gujarati, Kannada, Tamil, Telugu |
+| 2-set Hangul, building syllables as you type | Korean |
+| 12-key kana pad with flick input; kana → kanji / katakana in the suggestion bar | Japanese |
+| Pinyin; characters from the suggestion bar (space picks the first) | Chinese (Simplified) |
 
 Suggestions, autocorrect and gesture typing use word lists from
 [FrequencyWords](https://github.com/hermitdave/FrequencyWords) by Hermit Dave (built from OpenSubtitles, CC BY-SA 4.0).
-Each language's list (~650 KB) downloads automatically the first time you type in it. Not available yet for
+Each language's list (~650 KB) downloads automatically the first time you type in it. Japanese uses the
+[SKK](https://github.com/skk-dev/dict) dictionary (SKK-JISYO.M, GPL-2.0-or-later, downloaded on first use) for kana →
+kanji, and Chinese pinyin uses [pinyin4j](https://github.com/belerweb/pinyin4j) (BSD). Not available yet for
 Belarusian, Haitian Creole, Irish, Maltese, Swahili and Welsh.
 
 ## Limitations (for now)
 
-- No layout yet for Japanese, Chinese, Korean, Thai or the Indian languages (Hindi, Bengali, Tamil, …). These
-  need more than one key per character (kana/kanji conversion, Hangul syllable building, conjuncts), so they fall
-  back to QWERTY for now. They still work as the language it's *sent in*.
+- Japanese kanji conversion uses the SKK dictionary's plain words (nouns etc.); verbs and adjectives with okurigana
+  (書く, 高い) stay in kana for now. Chinese is Simplified only, word by word from a 50k word list.
+- Word-based checks (spelling squiggles, autocorrect, gesture typing) are off for Thai, Japanese and Chinese, which
+  don't separate words with spaces, and for Korean.
 - ML Kit's translations are decent but not perfect, and the translation of half a sentence can look odd until you
   finish it.
 - No next-word prediction yet (suggestions are for the word you're typing).

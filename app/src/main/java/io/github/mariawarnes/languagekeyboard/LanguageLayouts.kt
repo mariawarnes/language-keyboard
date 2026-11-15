@@ -6,7 +6,7 @@ package io.github.mariawarnes.languagekeyboard
 class LayoutSpec(
     /** Shown in settings, e.g. "QWERTZ". */
     val name: String,
-    /** Three rows of letters, space-separated. Shift/delete are added automatically. */
+    /** Rows of letters, space-separated. Shift/delete are added to the last one automatically. */
     val rows: List<String>,
     /** Long-press options per key (space-separated), shown after the top-row digit. */
     val alternates: Map<String, String> = emptyMap(),
@@ -23,6 +23,16 @@ class LayoutSpec(
     val lettersLabel: String = "ABC",
     /** False when we don't have a layout for this language yet and fall back to QWERTY. */
     val dedicated: Boolean = true,
+    /** Scripts with more letters than keys (Thai, Indian scripts): Shift shows these rows instead. */
+    val shiftRows: List<String>? = null,
+    /** Korean: jamo keys build Hangul syllables as you type. */
+    val hangul: Boolean = false,
+    /** Japanese: the 12-key kana pad with flick input (rows are ignored). */
+    val kana12: Boolean = false,
+    /** "ja" or "zh": what you type is converted (kana → kanji, pinyin → characters) via the bar. */
+    val converter: String? = null,
+    /** Words are separated by spaces (false for Thai, Japanese, Chinese): needed for word checks. */
+    val spaced: Boolean = true,
 )
 
 object LanguageLayouts {
@@ -163,9 +173,99 @@ object LanguageLayouts {
         ), latin = false, cased = false, lettersLabel = "აბგ", periodAlternates = "? ! … - :"))
     }
 
+    // --- Indian scripts -----------------------------------------------------------------------
+    // InScript, the standard layout for Indian scripts. Unicode gives every Indian script the same
+    // arrangement within its block, so one Devanagari definition maps onto each script by offset.
+    // Letters a script doesn't have (e.g. aspirated consonants in Tamil) are left out.
+    private val DEVANAGARI_ROWS = listOf(
+        "ौ ै ा ी ू ब ह ग द ज ड ़",
+        "ो े ् ि ु प र क त च ट",
+        "ॆ ं म न व ल स य",
+    )
+    private val DEVANAGARI_SHIFT = listOf(
+        "औ ऐ आ ई ऊ भ ङ घ ध झ ढ ञ",
+        "ओ ए अ इ उ फ ऱ ख थ छ ठ",
+        "ऎ ँ ण ऩ ऴ ळ श ष",
+    )
+    private val DEVANAGARI_ALTERNATES = mapOf(
+        "र" to "ृ ऋ", "ं" to "ः", "े" to "ॅ", "ो" to "ॉ", "ए" to "ऍ", "ओ" to "ऑ",
+        "क" to "क्ष", "ज" to "ज्ञ", "त" to "त्र", "स" to "श्र", "इ" to "ई", "उ" to "ऊ",
+    )
+
+    private fun indic(name: String, base: Int): LayoutSpec {
+        fun map(s: String) = buildString {
+            for (c in s) append(if (c.code in 0x0900..0x097F && c.code !in 0x0964..0x0965) (base + c.code - 0x0900).toChar() else c)
+        }
+        fun usable(k: String) = k.isNotEmpty() && k.all { Character.isDefined(it) }
+        fun rows(list: List<String>) = list.map { r -> r.split(' ').map(::map).filter(::usable).joinToString(" ") }
+        val alternates = DEVANAGARI_ALTERNATES.entries
+            .map { (k, v) -> map(k) to v.split(' ').map(::map).filter(::usable).joinToString(" ") }
+            .filter { (k, v) -> usable(k) && v.isNotEmpty() }
+            .toMap()
+        val digits = (0 until 10).map { (base + 0x67 + it).let { cp -> if (it == 9) base + 0x66 else cp }.toChar() }.joinToString("")
+        return LayoutSpec(
+            name, rows(DEVANAGARI_ROWS), alternates, latin = false, cased = false,
+            digits = if (Character.isDefined(digits[0])) digits else "1234567890",
+            periodAlternates = "। ? ! … - :", lettersLabel = map("कखग").filter { Character.isDefined(it) },
+            shiftRows = rows(DEVANAGARI_SHIFT),
+        )
+    }
+
+    private val more: Map<String, LayoutSpec> = buildMap {
+        put("hi", indic("हिन्दी (InScript)", 0x0900))
+        put("mr", indic("मराठी (InScript)", 0x0900))
+        put("bn", indic("বাংলা (InScript)", 0x0980))
+        put("gu", indic("ગુજરાતી (InScript)", 0x0A80))
+        put("ta", indic("தமிழ் (InScript)", 0x0B80))
+        put("te", indic("తెలుగు (InScript)", 0x0C00))
+        put("kn", indic("ಕನ್ನಡ (InScript)", 0x0C80))
+
+        // Thai Kedmanee: four rows of letters, with Shift for the rest.
+        put("th", LayoutSpec(
+            "ไทย (เกษมณี)",
+            listOf(
+                "ๅ / - ภ ถ ุ ึ ค ต จ ข ช",
+                "ๆ ไ ำ พ ะ ั ี ร น ย บ ล",
+                "ฟ ห ก ด เ ้ ่ า ส ว ง",
+                "ผ ป แ อ ิ ื ท ม ใ ฝ",
+            ),
+            latin = false, cased = false, digits = "", lettersLabel = "กขค", spaced = false,
+            periodAlternates = "? ! … - :",
+            shiftRows = listOf(
+                "+ ๑ ๒ ๓ ๔ ู ฿ ๕ ๖ ๗ ๘ ๙",
+                "๐ \" ฎ ฑ ธ ํ ๊ ณ ฯ ญ ฐ ,",
+                "ฤ ฆ ฏ โ ฌ ็ ๋ ษ ศ ซ .",
+                "( ) ฉ ฮ ฺ ์ ? ฒ ฬ ฦ",
+            ),
+        ))
+
+        // Korean 2-set (Dubeolsik): consonants left, vowels right; Shift for the double consonants.
+        put("ko", LayoutSpec(
+            "한국어 (두벌식)",
+            listOf("ㅂ ㅈ ㄷ ㄱ ㅅ ㅛ ㅕ ㅑ ㅐ ㅔ", "ㅁ ㄴ ㅇ ㄹ ㅎ ㅗ ㅓ ㅏ ㅣ", "ㅋ ㅌ ㅊ ㅍ ㅠ ㅜ ㅡ"),
+            latin = false, cased = false, lettersLabel = "가나다", periodAlternates = "? ! … - :",
+            shiftRows = listOf("ㅃ ㅉ ㄸ ㄲ ㅆ ㅛ ㅕ ㅑ ㅒ ㅖ", "ㅁ ㄴ ㅇ ㄹ ㅎ ㅗ ㅓ ㅏ ㅣ", "ㅋ ㅌ ㅊ ㅍ ㅠ ㅜ ㅡ"),
+            hangul = true,
+        ))
+
+        // Japanese: the 12-key kana pad (see KeyboardLayouts.japaneseKana).
+        put("ja", LayoutSpec(
+            "日本語 (12キー)", emptyList(), latin = false, cased = false, lettersLabel = "あいう",
+            comma = "、", commaAlternates = "， ・ ：", periodAlternates = "？ ！ … ・",
+            kana12 = true, converter = "ja", spaced = false,
+        ))
+
+        // Chinese: pinyin on QWERTY; characters come from the suggestion bar.
+        put("zh", LayoutSpec(
+            "拼音", listOf(QWERTY_1, QWERTY_2, QWERTY_3), mapOf("u" to "ü", "v" to "ü"),
+            latin = false, lettersLabel = "拼音", comma = "，", commaAlternates = "、 ； ： “ ”",
+            periodAlternates = "？ ！ … ·", converter = "zh", spaced = false,
+        ))
+    }
+
     private val fallback = qwerty()
 
     /** The layout for [code], or plain QWERTY (with [LayoutSpec.dedicated] = false) if we don't have one yet. */
     fun forLanguage(code: String): LayoutSpec =
-        specs[code] ?: LayoutSpec(fallback.name, fallback.rows, dedicated = false)
+        specs[code] ?: more[code] ?: LayoutSpec(fallback.name, fallback.rows, dedicated = false)
 }
