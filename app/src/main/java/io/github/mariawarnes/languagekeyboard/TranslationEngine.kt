@@ -76,7 +76,7 @@ class TranslationEngine(private val listener: Listener) {
                 if (translator !== client) return@addOnSuccessListener
                 handler.removeCallbacks(showDownloading)
                 state = State.READY
-                waiting?.let { waiting = null; run(it) }
+                waiting?.let { waiting = null; execute(it) }
             }
             .addOnFailureListener {
                 if (translator !== client) return@addOnFailureListener
@@ -91,7 +91,7 @@ class TranslationEngine(private val listener: Listener) {
         debounced?.let { handler.removeCallbacks(it) }
         val task = Runnable {
             debounced = null
-            run(request)
+            execute(request)
         }
         debounced = task
         handler.postDelayed(task, if (immediate) 0L else DEBOUNCE_MS)
@@ -103,7 +103,7 @@ class TranslationEngine(private val listener: Listener) {
         waiting = null
     }
 
-    private fun run(request: Request) {
+    private fun execute(request: Request) {
         val client = translator ?: return
         if (state != State.READY) {
             waiting = request
