@@ -10,6 +10,7 @@ import android.inputmethodservice.InputMethodService
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
+import android.text.TextUtils
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
@@ -20,15 +21,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ContextThemeWrapper
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.ExtractedTextRequest
 import android.widget.HorizontalScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import java.text.BreakIterator
 import java.util.Locale
 import java.util.concurrent.Executors
-import kotlin.math.roundToInt
+import kotlin.math.abs
 
 /**
  * The keyboard.
@@ -78,6 +79,7 @@ class LanguageKeyboardService : InputMethodService(),
     private var toggleNative: TextView? = null
     private var typedText: PracticeTextView? = null
     private var translatingIndicator: TextView? = null
+    private var clearButton: View? = null
 
     // --- What you typed and what's in the field ---------------------------------------------
 
@@ -251,7 +253,7 @@ class LanguageKeyboardService : InputMethodService(),
         }
         typedText = root.findViewById(R.id.typed_text)
         translatingIndicator = root.findViewById(R.id.translating_indicator)
-        root.findViewById<View>(R.id.clear_button).setOnClickListener { clearPhrase() }
+        clearButton = root.findViewById<View>(R.id.clear_button).also { it.setOnClickListener { clearPhrase() } }
         root.findViewById<View>(R.id.settings_button).setOnClickListener { openSettings() }
         suggestionBar = root.findViewById(R.id.suggestions)
         practiceScroll = root.findViewById(R.id.practice_scroll)
@@ -766,7 +768,6 @@ class LanguageKeyboardService : InputMethodService(),
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         selStart = newSelStart
         selEnd = newSelEnd
-        if (newSelStart != lastSlideTarget) lastSlideTarget = -1
         if (buffer.isEmpty() && composed.isEmpty()) {
             updateAutoShift()
             updateSuggestions()
@@ -844,6 +845,8 @@ class LanguageKeyboardService : InputMethodService(),
             }
         }
 
+        clearButton?.visibility = if (active && buffer.isNotEmpty()) View.VISIBLE else View.GONE
+
         translatingIndicator?.visibility =
             if (active && buffer.isNotEmpty() && appliedGeneration != generation) View.VISIBLE else View.INVISIBLE
 
@@ -916,19 +919,24 @@ class LanguageKeyboardService : InputMethodService(),
     }
 
     /**
-     * Slide on the space bar: the finger's position across the keyboard places the cursor in the
-     * practice text (or, with nothing there, in the app's own text box).
+     * Slide on the space bar: move the cursor [steps] characters through the practice text (or,
+     * with nothing there, through the app's own text). A "character" is what you see as one, so an
+     * emoji or an accented letter counts once. Right-to-left languages move the other way.
      */
-    override fun onCursorSlide(fraction: Float): Boolean {
+    override fun onCursorMove(steps: Int): Boolean {
         gestureWords = null
         undoAutocorrect = null
         autoSpaced = false
+        val rtl = TextUtils.getLayoutDirectionFromLocale(Locale.forLanguageTag(layoutLanguage)) == View.LAYOUT_DIRECTION_RTL
+        val delta = if (rtl) -steps else steps
         if (translationActive && buffer.isNotEmpty()) {
-            var target = (fraction * buffer.length).roundToInt().coerceIn(0, buffer.length)
-            // Don't land between the two halves of an emoji or other surrogate pair.
-            if (target in 1 until buffer.length &&
-                Character.isLowSurrogate(buffer[target]) && Character.isHighSurrogate(buffer[target - 1])
-            ) target--
+            val chars = BreakIterator.getCharacterInstance()
+            chars.setText(buffer.toString())
+            var target = cursor
+            repeat(abs(delta)) {
+                val next = if (delta < 0) chars.preceding(target) else chars.following(target)
+                if (next != BreakIterator.DONE) target = next
+            }
             if (target == cursor) return false
             cursor = target
             lastResult = null
@@ -936,18 +944,18 @@ class LanguageKeyboardService : InputMethodService(),
             refreshUi()
             return true
         }
+        // The app's own text: arrow-key presses, which every editor understands. Stop at the ends,
+        // where an arrow key could move focus out of the text box instead.
         val ic = currentInputConnection ?: return false
-        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0) ?: return false
-        val length = extracted.text?.length ?: 0
-        val target = extracted.startOffset + (fraction * length).roundToInt().coerceIn(0, length)
-        if (target == lastSlideTarget) return false
-        lastSlideTarget = target
-        ic.setSelection(target, target)
-        return true
+        var moved = false
+        repeat(abs(delta)) {
+            val more = if (delta < 0) ic.getTextBeforeCursor(1, 0) else ic.getTextAfterCursor(1, 0)
+            if (more.isNullOrEmpty()) return moved
+            sendDownUpKeyEvents(if (delta < 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT)
+            moved = true
+        }
+        return moved
     }
-
-    /** Last cursor position set by sliding in the app's own text, to avoid repeating it. */
-    private var lastSlideTarget = -1
 
     /** Tap the practice text to put the cursor there (and open a marked mistake). */
     @SuppressLint("ClickableViewAccessibility")
@@ -1343,8 +1351,8 @@ class LanguageKeyboardService : InputMethodService(),
     private fun enterLabelFor(info: EditorInfo?): String {
         if (info == null || (info.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0) return "⏎"
         // "Send" and "Search" are shown as icons; the other actions as words in the language you're
-        // practising, in every field (web addresses and passwords included).
-        val language = Prefs.typingLanguage(this)
+        // typing in right now (the highlighted half of the ES | EN switch).
+        val language = if (translationActive) Prefs.typingLanguage(this) else Prefs.outputLanguage(this)
         return when (info.imeOptions and EditorInfo.IME_MASK_ACTION) {
             EditorInfo.IME_ACTION_SEND -> "Send"
             EditorInfo.IME_ACTION_SEARCH -> "Search"

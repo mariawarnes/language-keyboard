@@ -36,10 +36,10 @@ class KeyboardView @JvmOverloads constructor(
         fun onGesture(xs: FloatArray, ys: FloatArray)
 
         /**
-         * Sliding along the space bar: put the cursor at [fraction] of the way through the text
-         * (0 = left edge of the keyboard = start, 1 = right edge = end). Returns true if it moved.
+         * Sliding along the space bar: move the cursor [steps] characters (negative = left).
+         * Returns true if it actually moved (for the haptic tick).
          */
-        fun onCursorSlide(fraction: Float): Boolean
+        fun onCursorMove(steps: Int): Boolean
     }
 
     /** Swiping from a letter key types a word instead of sliding between keys. */
@@ -440,6 +440,26 @@ class KeyboardView @JvmOverloads constructor(
 
     // Space-bar cursor control
     private var cursorSliding = false
+    private var cursorAnchorX = 0f
+    private var edgeDirection = 0
+    private var edgeStartTime = 0L
+
+    /** While the thumb rests at the far left/right of the keyboard, keep moving that way. */
+    private val edgeRepeat = object : Runnable {
+        override fun run() {
+            if (!cursorSliding || edgeDirection == 0) return
+            val held = android.os.SystemClock.uptimeMillis() - edgeStartTime
+            val steps = when {
+                held > 1500 -> 4
+                held > 700 -> 2
+                else -> 1
+            }
+            if (listener?.onCursorMove(edgeDirection * steps) == true) {
+                performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            }
+            keyHandler.postDelayed(this, EDGE_REPEAT_MS)
+        }
+    }
 
     private val longPressRunnable = Runnable {
         val pk = pressedKey ?: return@Runnable
@@ -557,20 +577,39 @@ class KeyboardView @JvmOverloads constructor(
     }
 
     /**
-     * Slide along the space bar to place the cursor: the finger's position across the whole
-     * keyboard maps straight onto the text, left edge = start, right edge = end.
+     * Slide along the space bar to move the cursor, like Gboard/HeliBoard: one character for each
+     * ~10dp the thumb moves, relative to where it is. Resting the thumb at the far left or right
+     * edge keeps the cursor moving that way (speeding up), so the ends are easy to reach.
      */
     private fun slideOnSpace(x: Float) {
+        val step = dp(SLIDE_STEP_DP)
         if (!cursorSliding) {
-            if (kotlin.math.abs(x - downX) < unitWidth * 0.5f) return // a tap types a space
+            if (kotlin.math.abs(x - downX) < step) return // a tap types a space
             cursorSliding = true
+            cursorAnchorX = downX
             keyHandler.removeCallbacks(longPressRunnable)
             invalidate()
         }
-        // A small margin at each edge so the very start and end are easy to reach.
-        val margin = unitWidth * 0.5f
-        val fraction = ((x - margin) / (width - 2 * margin)).coerceIn(0f, 1f)
-        if (listener?.onCursorSlide(fraction) == true) performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        val steps = ((x - cursorAnchorX) / step).toInt()
+        if (steps != 0) {
+            cursorAnchorX += steps * step
+            if (listener?.onCursorMove(steps) == true) performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        }
+        // Edge zones: about half a key from either side.
+        val edge = unitWidth * 0.6f
+        val direction = when {
+            x < edge -> -1
+            x > width - edge -> 1
+            else -> 0
+        }
+        if (direction != edgeDirection) {
+            edgeDirection = direction
+            keyHandler.removeCallbacks(edgeRepeat)
+            if (direction != 0) {
+                edgeStartTime = android.os.SystemClock.uptimeMillis()
+                keyHandler.postDelayed(edgeRepeat, EDGE_REPEAT_MS)
+            }
+        }
     }
 
     private fun release(commit: Boolean) {
@@ -607,6 +646,8 @@ class KeyboardView @JvmOverloads constructor(
         gesturing = false
         gestureXs.clear(); gestureYs.clear()
         cursorSliding = false
+        edgeDirection = 0
+        keyHandler.removeCallbacks(edgeRepeat)
         invalidate()
     }
 
@@ -628,5 +669,7 @@ class KeyboardView @JvmOverloads constructor(
         const val LONG_PRESS_MS = 350L
         const val REPEAT_DELAY_MS = 400L
         const val REPEAT_INTERVAL_MS = 50L
+        const val SLIDE_STEP_DP = 10f
+        const val EDGE_REPEAT_MS = 70L
     }
 }

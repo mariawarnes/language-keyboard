@@ -81,27 +81,29 @@
             android:textSize="17sp"
             android:visibility="invisible" />
 
-        <TextView
+        <!-- Only shown when there's practice text to clear. -->
+        <ImageView
             android:id="@+id/clear_button"
             android:layout_width="40dp"
             android:layout_height="match_parent"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/cd_clear"
-            android:gravity="center"
-            android:text="✕"
-            android:textColor="@color/strip_text_secondary"
-            android:textSize="18sp" />
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_close"
+            android:tint="@color/strip_text_secondary"
+            android:visibility="gone" />
 
-        <TextView
+        <ImageView
             android:id="@+id/settings_button"
             android:layout_width="40dp"
             android:layout_height="match_parent"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/cd_settings"
-            android:gravity="center"
-            android:text="⚙"
-            android:textColor="@color/strip_text_secondary"
-            android:textSize="20sp" />
+            android:padding="9dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_settings"
+            android:tint="@color/strip_text_secondary" />
     </LinearLayout>
 
     <!-- Explains a marked mistake in the practice text and offers fixes. -->
@@ -136,16 +138,16 @@
             android:id="@+id/correction_fix_2"
             style="@style/CorrectionChip" />
 
-        <TextView
+        <ImageView
             android:id="@+id/correction_close"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/cd_close"
-            android:gravity="center"
-            android:text="✕"
-            android:textColor="@color/strip_text_secondary"
-            android:textSize="16sp" />
+            android:padding="11dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_close"
+            android:tint="@color/strip_text_secondary" />
     </LinearLayout>
 
     <!-- Word suggestions / autocorrect / gesture alternatives. -->

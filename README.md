@@ -44,9 +44,10 @@ text box receives the **translation into your own language**, updated live as yo
   - Your own word appears in quotes on the left of the suggestion bar; tap it to keep it and teach it to the keyboard.
   - Swipe across the letters to type a word; other guesses appear in the suggestion bar, and backspace removes the
     whole swiped word.
-- **Hold and slide along the space bar** to move the cursor through what you've typed (the practice bar scrolls to
-  follow it), or tap the practice text to put the cursor there. In direct mode, the slide moves the cursor
-  in the app's own text box.
+- **Slide along the space bar** to move the cursor, one character at a time, like Gboard: it moves relative to
+  your thumb (about one character per 10dp). Rest your thumb at the far left or right edge of the keyboard to keep
+  going to the start or end. Tap the practice text to put the cursor there. In direct mode the slide moves the
+  cursor in the app's own text box.
 - **Mistakes in the language you're practising get squiggly underlines** in the practice bar, like a word
   processor: red for misspelt words and missing accents, and — if you turn on the online grammar check — blue for
   grammar problems. Tap a marked word to see what's wrong and tap a fix. Pressing ✓ while mistakes are marked shows them first;
