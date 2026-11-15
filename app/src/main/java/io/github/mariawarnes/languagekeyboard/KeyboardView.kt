@@ -236,12 +236,95 @@ class KeyboardView @JvmOverloads constructor(
             else -> sp(15f)
         }
         if (key.code == Codes.SPACE) textPaint.color = colorHint
-        val baseline = face.centerY() - (textPaint.descent() + textPaint.ascent()) / 2
-        canvas.drawText(label, face.centerX(), baseline, textPaint)
+        val icon = iconFor(key)
+        if (icon != null) {
+            drawIcon(canvas, face, icon, textPaint.color, filled = key.code == Codes.SHIFT && shiftState == ShiftState.LOCKED)
+        } else {
+            val baseline = face.centerY() - (textPaint.descent() + textPaint.ascent()) / 2
+            canvas.drawText(label, face.centerX(), baseline, textPaint)
+        }
 
         key.hint?.let {
             canvas.drawText(it, face.right - dp(5f), face.top + hintPaint.textSize + dp(2f), hintPaint)
         }
+    }
+
+    // --- Function-key icons -----------------------------------------------------------------
+
+    private enum class Icon { SHIFT, DELETE, RETURN, CHECK }
+
+    /** Shift, delete and enter are drawn as icons in one line style; other keys use text. */
+    private fun iconFor(key: Key): Icon? = when (key.code) {
+        Codes.SHIFT -> Icon.SHIFT
+        Codes.DELETE -> Icon.DELETE
+        Codes.ENTER -> when (enterLabel) {
+            "⏎" -> Icon.RETURN
+            "✓" -> Icon.CHECK
+            else -> null // "Send", "Go", "Search"… stay as words
+        }
+        else -> null
+    }
+
+    private val iconPath = Path()
+    private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+
+    /** Icons are designed on a 24×24 grid and scaled to the key. */
+    private fun drawIcon(canvas: Canvas, face: RectF, icon: Icon, color: Int, filled: Boolean) {
+        val size = minOf(dp(26f), face.height() * 0.55f, face.width() * 0.6f)
+        val scale = size / 24f
+        canvas.save()
+        canvas.translate(face.centerX() - size / 2, face.centerY() - size / 2)
+        canvas.scale(scale, scale)
+        iconPaint.color = color
+        iconPaint.strokeWidth = 1.9f
+        iconPaint.style = Paint.Style.STROKE
+        iconPath.rewind()
+        when (icon) {
+            Icon.SHIFT -> {
+                // Up arrow outline; solid when caps lock is on.
+                iconPath.moveTo(12f, 3.5f)
+                iconPath.lineTo(21f, 12.5f)
+                iconPath.lineTo(16f, 12.5f)
+                iconPath.lineTo(16f, 20f)
+                iconPath.lineTo(8f, 20f)
+                iconPath.lineTo(8f, 12.5f)
+                iconPath.lineTo(3f, 12.5f)
+                iconPath.close()
+                if (filled) iconPaint.style = Paint.Style.FILL_AND_STROKE
+            }
+            Icon.DELETE -> {
+                // Backspace tag with an ×.
+                iconPath.moveTo(21.5f, 5f)
+                iconPath.lineTo(8.5f, 5f)
+                iconPath.lineTo(2f, 12f)
+                iconPath.lineTo(8.5f, 19f)
+                iconPath.lineTo(21.5f, 19f)
+                iconPath.close()
+                iconPath.moveTo(11.5f, 9f)
+                iconPath.lineTo(17.5f, 15f)
+                iconPath.moveTo(17.5f, 9f)
+                iconPath.lineTo(11.5f, 15f)
+            }
+            Icon.RETURN -> {
+                // Down-and-left return arrow.
+                iconPath.moveTo(20f, 5f)
+                iconPath.lineTo(20f, 13f)
+                iconPath.lineTo(4.5f, 13f)
+                iconPath.moveTo(9f, 8.5f)
+                iconPath.lineTo(4.5f, 13f)
+                iconPath.lineTo(9f, 17.5f)
+            }
+            Icon.CHECK -> {
+                iconPath.moveTo(4f, 12.5f)
+                iconPath.lineTo(9.5f, 18f)
+                iconPath.lineTo(20f, 6.5f)
+            }
+        }
+        canvas.drawPath(iconPath, iconPaint)
+        canvas.restore()
     }
 
     // --- Long-press popup -------------------------------------------------------------------
