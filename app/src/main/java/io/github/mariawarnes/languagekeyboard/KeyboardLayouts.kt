@@ -91,16 +91,18 @@ object KeyboardLayouts {
 
         val result = ArrayList<List<Key>>()
         rows.dropLast(1).forEachIndexed { r, row ->
-            result += row.mapIndexed { i, c -> letter(c, if (r == 0) i else null) }
+            result.add(row.mapIndexed { i, c -> letter(c, if (r == 0) i else null) })
         }
-        result += buildList {
-            if (hasShift) add(shift(fnWidth))
-            addAll(last.mapIndexed { i, c -> letter(c, if (rows.size == 1) i else null) })
-            add(delete(fnWidth))
-        }
-        result += bottomRow(
-            total, modeKey("?123", Codes.MODE_SYMBOLS),
-            spec.comma, spec.commaAlternates, spec.periodAlternates,
+        val lastRow = ArrayList<Key>()
+        if (hasShift) lastRow.add(shift(fnWidth))
+        last.forEachIndexed { i, c -> lastRow.add(letter(c, if (rows.size == 1) i else null)) }
+        lastRow.add(delete(fnWidth))
+        result.add(lastRow)
+        result.add(
+            bottomRow(
+                total, modeKey("?123", Codes.MODE_SYMBOLS),
+                spec.comma, spec.commaAlternates, spec.periodAlternates,
+            ),
         )
         return result
     }
