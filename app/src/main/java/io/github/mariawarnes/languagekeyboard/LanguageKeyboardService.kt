@@ -1205,8 +1205,9 @@ class LanguageKeyboardService : InputMethodService(),
 
     private fun enterLabelFor(info: EditorInfo?): String {
         if (info == null || (info.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0) return "⏎"
-        // "Send" and "Search" are shown as icons; the other actions as words in the language being typed.
-        val language = layoutLanguage
+        // "Send" and "Search" are shown as icons; the other actions as words in the language you're
+        // practising, in every field (web addresses and passwords included).
+        val language = Prefs.typingLanguage(this)
         return when (info.imeOptions and EditorInfo.IME_MASK_ACTION) {
             EditorInfo.IME_ACTION_SEND -> "Send"
             EditorInfo.IME_ACTION_SEARCH -> "Search"
