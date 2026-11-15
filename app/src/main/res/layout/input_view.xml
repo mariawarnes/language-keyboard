@@ -76,6 +76,38 @@
             android:textSize="20sp" />
     </LinearLayout>
 
+    <!-- Word suggestions / autocorrect / gesture alternatives. -->
+    <LinearLayout
+        android:id="@+id/suggestions"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/suggestion_left"
+            style="@style/SuggestionSlot" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="20dp"
+            android:background="@color/kb_key_function" />
+
+        <TextView
+            android:id="@+id/suggestion_center"
+            style="@style/SuggestionSlot" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="20dp"
+            android:background="@color/kb_key_function" />
+
+        <TextView
+            android:id="@+id/suggestion_right"
+            style="@style/SuggestionSlot" />
+    </LinearLayout>
+
     <io.github.mariawarnes.languagekeyboard.KeyboardView
         android:id="@+id/keyboard"
         android:layout_width="match_parent"

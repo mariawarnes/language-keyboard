@@ -2,7 +2,10 @@ package io.github.mariawarnes.languagekeyboard
 
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.Typeface
 import android.inputmethodservice.InputMethodService
+import android.os.Handler
+import android.os.Looper
 import android.text.InputType
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -69,6 +72,40 @@ class LanguageKeyboardService : InputMethodService(),
 
     private var statusMessage: String? = null
 
+    // --- Suggestions, autocorrect and gesture typing ----------------------------------------
+
+    private var suggestionBar: View? = null
+    private val suggestionViews = arrayOfNulls<TextView>(3)
+
+    private var suggestionsEnabled = true
+    private var autocorrectEnabled = true
+    private var gestureEnabled = true
+
+    /** Word list for [layoutLanguage], once loaded. */
+    private var dictionary: Dictionary? = null
+    private var requestedDictionary: String? = null
+    private var userWords: Set<String> = emptySet()
+
+    /** Latest suggestions, for the word they were computed for. */
+    private var lastResult: SuggestionResult? = null
+    private var suggestionRequest = 0
+    private var gestureRequest = 0
+
+    /** After a swipe: the word it typed and the other guesses (first = the one typed). */
+    private var gestureWords: List<String>? = null
+
+    /** Lets backspace right after an autocorrection put back what you typed. */
+    private class AutocorrectUndo(val original: String, val corrected: String, val separator: String)
+    private var undoAutocorrect: AutocorrectUndo? = null
+
+    /** A space was added after a picked suggestion (punctuation typed next replaces it). */
+    private var autoSpaced = false
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private enum class SlotKind { VERBATIM, WORD, GESTURE, INFO }
+    private class Slot(val text: String, val kind: SlotKind, val emphasised: Boolean = false)
+
     // --- Keyboard state ---------------------------------------------------------------------
 
     private var mode = KeyboardMode.LETTERS
@@ -102,6 +139,7 @@ class LanguageKeyboardService : InputMethodService(),
         super.onCreate()
         engine = TranslationEngine(this)
         translateEnabled = Prefs.translateEnabled(this)
+        readTypingOptions()
         Prefs.get(this).registerOnSharedPreferenceChangeListener(this)
         configureEngine()
     }
@@ -122,6 +160,10 @@ class LanguageKeyboardService : InputMethodService(),
         translatingIndicator = root.findViewById(R.id.translating_indicator)
         root.findViewById<View>(R.id.clear_button).setOnClickListener { clearPhrase() }
         root.findViewById<View>(R.id.settings_button).setOnClickListener { openSettings() }
+        suggestionBar = root.findViewById(R.id.suggestions)
+        suggestionViews[0] = root.findViewById(R.id.suggestion_left)
+        suggestionViews[1] = root.findViewById(R.id.suggestion_center)
+        suggestionViews[2] = root.findViewById(R.id.suggestion_right)
 
         // Android 15+ draws keyboards edge-to-edge: keep the keys clear of the gesture bar /
         // navigation buttons (the keyboard's background still fills the space behind them).
@@ -164,6 +206,8 @@ class LanguageKeyboardService : InputMethodService(),
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        readTypingOptions()
+        requestedDictionary = null // retry a failed word-list download each time the keyboard opens
         configureEngine()
         if (shiftState != ShiftState.LOCKED) shiftState = ShiftState.OFF
         updateAutoShift()
@@ -183,8 +227,18 @@ class LanguageKeyboardService : InputMethodService(),
                 configureEngine()
             }
             Prefs.KEY_TRANSLATE_ENABLED -> translateEnabled = Prefs.translateEnabled(this)
+            Prefs.KEY_GESTURE_TYPING, Prefs.KEY_SUGGESTIONS, Prefs.KEY_AUTOCORRECT -> {
+                readTypingOptions()
+                requestedDictionary = null
+            }
         }
         refreshUi()
+    }
+
+    private fun readTypingOptions() {
+        suggestionsEnabled = Prefs.suggestions(this)
+        autocorrectEnabled = Prefs.autocorrect(this)
+        gestureEnabled = Prefs.gestureTyping(this)
     }
 
     private fun configureEngine() {
@@ -196,14 +250,76 @@ class LanguageKeyboardService : InputMethodService(),
     // --- Keys -------------------------------------------------------------------------------
 
     override fun onText(text: String) {
+        var spaced = false
+        var undo: AutocorrectUndo? = null
+        when {
+            // The space after a picked suggestion is already there.
+            autoSpaced && text == " " -> Unit
+            // "word |" + "." -> "word. |"
+            autoSpaced && text in PUNCTUATION && textBefore().endsWith(" ") -> {
+                replaceBefore(1, "$text ")
+                spaced = true
+            }
+            (text == " " || text in PUNCTUATION) && autocorrectEnabled && dictionary != null -> {
+                undo = autocorrect(text)
+                if (undo == null) insert(text)
+            }
+            else -> insert(text)
+        }
+        autoSpaced = spaced
+        undoAutocorrect = undo
+        gestureWords = null
+        if (shiftState == ShiftState.ONE_SHOT) shiftState = ShiftState.OFF
+        updateAutoShift()
+        updateSuggestions()
+    }
+
+    /** Text before the cursor that typing aids work on: the practice text, or the field's own text. */
+    private fun textBefore(): String =
+        if (translationActive) buffer.toString()
+        else currentInputConnection?.getTextBeforeCursor(64, 0)?.toString().orEmpty()
+
+    private fun isWordChar(c: Char) =
+        c.isLetter() || c == '\'' || c == '’' || Character.getType(c) == Character.NON_SPACING_MARK.toInt()
+
+    /** The (partial) word just before the cursor. */
+    private fun currentWord(before: String = textBefore()): String =
+        before.takeLastWhile { isWordChar(it) }.trimStart('\'', '’')
+
+    private fun insert(text: String) {
         if (translationActive) {
             buffer.append(text)
             onBufferChanged()
         } else {
             currentInputConnection?.commitText(text, 1)
         }
-        if (shiftState == ShiftState.ONE_SHOT) shiftState = ShiftState.OFF
-        updateAutoShift()
+    }
+
+    /** Replace the last [count] characters before the cursor with [text]. */
+    private fun replaceBefore(count: Int, text: String) {
+        if (translationActive) {
+            buffer.setLength(maxOf(0, buffer.length - count))
+            buffer.append(text)
+            onBufferChanged()
+        } else {
+            val ic = currentInputConnection ?: return
+            ic.beginBatchEdit()
+            if (count > 0) ic.deleteSurroundingText(count, 0)
+            ic.commitText(text, 1)
+            ic.endBatchEdit()
+        }
+    }
+
+    /** On space/punctuation: fix the word just typed if autocorrect is sure. Returns how to undo it. */
+    private fun autocorrect(separator: String): AutocorrectUndo? {
+        val dict = dictionary ?: return null
+        val word = currentWord()
+        if (word.length < 2) return null
+        val result = lastResult?.takeIf { it.typed == word } ?: Suggester.suggest(dict, word, userWords)
+        val correction = result.correction ?: return null
+        if (correction == word) return null
+        replaceBefore(word.length, correction + separator)
+        return AutocorrectUndo(word, correction, separator)
     }
 
     override fun onKey(code: Int) {
@@ -224,7 +340,19 @@ class LanguageKeyboardService : InputMethodService(),
     }
 
     private fun onDelete() {
-        if (translationActive && buffer.isNotEmpty()) {
+        val undo = undoAutocorrect
+        val swiped = gestureWords?.firstOrNull()
+        undoAutocorrect = null
+        gestureWords = null
+        autoSpaced = false
+        val before = if (undo != null || swiped != null) textBefore() else ""
+        if (undo != null && before.endsWith(undo.corrected + undo.separator)) {
+            // Backspace straight after an autocorrection puts back what you typed.
+            replaceBefore(undo.corrected.length + undo.separator.length, undo.original + undo.separator)
+        } else if (swiped != null && before.endsWith(swiped)) {
+            // Backspace straight after a swipe removes the whole word.
+            replaceBefore(swiped.length, "")
+        } else if (translationActive && buffer.isNotEmpty()) {
             val cut = buffer.offsetByCodePoints(buffer.length, -1)
             buffer.setLength(cut)
             onBufferChanged()
@@ -232,6 +360,7 @@ class LanguageKeyboardService : InputMethodService(),
             sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
         }
         updateAutoShift()
+        updateSuggestions()
     }
 
     private fun onEnter() {
@@ -264,7 +393,7 @@ class LanguageKeyboardService : InputMethodService(),
 
     private fun setMode(newMode: KeyboardMode) {
         mode = newMode
-        keyboardView?.rows = KeyboardLayouts.forMode(mode, layoutLanguage)
+        refreshUi()
     }
 
     /** Capitalise the first letter of a sentence when the app asks for it. */
@@ -413,6 +542,9 @@ class LanguageKeyboardService : InputMethodService(),
         commitPending = false
         statusMessage = null
         recentExpectedCursors.clear()
+        gestureWords = null
+        undoAutocorrect = null
+        autoSpaced = false
     }
 
     private fun toggleTranslation() {
@@ -440,6 +572,7 @@ class LanguageKeyboardService : InputMethodService(),
         selEnd = newSelEnd
         if (buffer.isEmpty() && composed.isEmpty()) {
             updateAutoShift()
+            updateSuggestions()
             return
         }
 
@@ -472,9 +605,11 @@ class LanguageKeyboardService : InputMethodService(),
         val output = Prefs.outputLanguage(this)
         val active = translationActive
 
+        ensureDictionary()
         keyboardView?.let { kv ->
             val language = layoutLanguage
             kv.rows = KeyboardLayouts.forMode(mode, language)
+            kv.gestureEnabled = gestureEnabled && dictionary != null && mode == KeyboardMode.LETTERS
             kv.caseLocale = Locale.forLanguageTag(language)
             kv.shiftState = shiftState
             kv.enterLabel = if (active && buffer.isNotEmpty()) "✓" else enterLabelFor(currentInputEditorInfo)
@@ -518,6 +653,183 @@ class LanguageKeyboardService : InputMethodService(),
                 tv.setTextColor(secondary)
             }
         }
+        updateSuggestions()
+    }
+
+    // --- Suggestions, autocorrect, gesture typing -------------------------------------------
+
+    /** Make sure the word list for the language being typed is loaded (downloading it once). */
+    private fun ensureDictionary() {
+        val language = layoutLanguage
+        val wanted = fieldAllowsTranslation && (suggestionsEnabled || autocorrectEnabled || gestureEnabled) &&
+            Dictionaries.isSupported(language)
+        if (!wanted) {
+            dictionary = null
+            return
+        }
+        if (dictionary?.language == language) return
+        dictionary = Dictionaries.cached(language)
+        userWords = Prefs.userWords(this, language)
+        lastResult = null
+        gestureWords = null
+        if (dictionary == null && requestedDictionary != language) {
+            requestedDictionary = language
+            Dictionaries.load(this, language, download = true) { loaded ->
+                if (loaded != null && loaded.language == layoutLanguage) {
+                    dictionary = loaded
+                    refreshUi()
+                } else {
+                    updateSuggestions()
+                }
+            }
+        }
+    }
+
+    override fun onGesture(xs: FloatArray, ys: FloatArray) {
+        val dict = dictionary ?: return
+        val keyMap = keyboardView?.keyMap() ?: return
+        val request = ++gestureRequest
+        val shift = shiftState
+        Dictionaries.worker.execute {
+            val words = GestureDecoder.decode(xs, ys, keyMap, dict, 4)
+            mainHandler.post {
+                if (request == gestureRequest && dictionary === dict && words.isNotEmpty()) typeGestureWord(words, shift)
+            }
+        }
+    }
+
+    private fun typeGestureWord(words: List<String>, shift: ShiftState) {
+        val locale = dictionary?.locale ?: Locale.ROOT
+        val cased = words.map {
+            when (shift) {
+                ShiftState.LOCKED -> it.uppercase(locale)
+                ShiftState.ONE_SHOT -> it.replaceFirstChar { c -> c.titlecase(locale) }
+                ShiftState.OFF -> it
+            }
+        }
+        val before = textBefore()
+        val needsSpace = before.isNotEmpty() && !before.last().isWhitespace() && before.last() !in OPENERS
+        insert((if (needsSpace) " " else "") + cased[0])
+        gestureWords = cased
+        undoAutocorrect = null
+        autoSpaced = false
+        if (shiftState == ShiftState.ONE_SHOT) shiftState = ShiftState.OFF
+        updateAutoShift()
+        updateSuggestions()
+    }
+
+    private fun updateSuggestions() {
+        val bar = suggestionBar ?: return
+        val visible = suggestionsEnabled && fieldAllowsTranslation && Dictionaries.isSupported(layoutLanguage)
+        bar.visibility = if (visible) View.VISIBLE else View.GONE
+        if (!visible) return
+
+        gestureWords?.let { words ->
+            showSlots(listOf(
+                words.getOrNull(1)?.let { Slot(it, SlotKind.GESTURE) },
+                Slot(words[0], SlotKind.GESTURE, emphasised = true),
+                words.getOrNull(2)?.let { Slot(it, SlotKind.GESTURE) },
+            ))
+            return
+        }
+        val dict = dictionary
+        if (dict == null) {
+            val loading = Dictionaries.isLoading(layoutLanguage)
+            showSlots(listOf(null, if (loading) Slot(getString(R.string.suggestions_loading), SlotKind.INFO) else null, null))
+            return
+        }
+        val word = currentWord()
+        if (word.isEmpty()) {
+            showSlots(listOf(null, null, null))
+            return
+        }
+        lastResult?.takeIf { it.typed == word }?.let { showSlots(slotsFor(it)); return }
+        val request = ++suggestionRequest
+        val taught = userWords
+        Dictionaries.worker.execute {
+            val result = Suggester.suggest(dict, word, taught)
+            mainHandler.post {
+                if (request == suggestionRequest && dictionary === dict) {
+                    lastResult = result
+                    showSlots(slotsFor(result))
+                }
+            }
+        }
+    }
+
+    /**
+     * Middle slot: what space will type (the correction, or your word if it's fine).
+     * Left: your word exactly as typed, in quotes, when it isn't a known word.
+     */
+    private fun slotsFor(r: SuggestionResult): List<Slot?> {
+        val others = r.suggestions.filter { it != r.correction }
+        val verbatim = Slot(if (r.known) r.typed else "“${r.typed}”", SlotKind.VERBATIM)
+        return when {
+            r.correction != null -> listOf(
+                verbatim,
+                Slot(r.correction, SlotKind.WORD, emphasised = autocorrectEnabled),
+                others.getOrNull(0)?.let { Slot(it, SlotKind.WORD) },
+            )
+            r.known -> listOf(
+                others.getOrNull(0)?.let { Slot(it, SlotKind.WORD) },
+                Slot(r.typed, SlotKind.VERBATIM, emphasised = true),
+                others.getOrNull(1)?.let { Slot(it, SlotKind.WORD) },
+            )
+            else -> listOf(
+                verbatim,
+                others.getOrNull(0)?.let { Slot(it, SlotKind.WORD) },
+                others.getOrNull(1)?.let { Slot(it, SlotKind.WORD) },
+            )
+        }
+    }
+
+    private fun showSlots(slots: List<Slot?>) {
+        slots.forEachIndexed { i, slot ->
+            val tv = suggestionViews[i] ?: return@forEachIndexed
+            tv.text = slot?.text.orEmpty()
+            tv.setTypeface(null, if (slot?.emphasised == true) Typeface.BOLD else Typeface.NORMAL)
+            tv.alpha = if (slot?.kind == SlotKind.INFO) 0.6f else 1f
+            val clickable = slot != null && slot.kind != SlotKind.INFO
+            tv.isClickable = clickable
+            tv.setOnClickListener(if (clickable) View.OnClickListener { pickSuggestion(slot!!) } else null)
+        }
+    }
+
+    private fun pickSuggestion(slot: Slot) {
+        when (slot.kind) {
+            SlotKind.GESTURE -> {
+                // Swap the swiped word for another guess.
+                val words = gestureWords ?: return
+                val current = words[0]
+                if (!textBefore().endsWith(current)) return
+                replaceBefore(current.length, slot.text)
+                gestureWords = listOf(slot.text) + words.filter { it != slot.text }
+            }
+            SlotKind.VERBATIM -> {
+                // Keep the word exactly as typed, and don't autocorrect it in future.
+                val word = currentWord()
+                val dict = dictionary
+                if (dict != null && word.isNotEmpty() && lastResult?.known == false) {
+                    val lower = word.lowercase(dict.locale)
+                    Prefs.addUserWord(this, dict.language, lower)
+                    userWords = userWords + lower
+                }
+                insert(" ")
+                autoSpaced = true
+                undoAutocorrect = null
+            }
+            SlotKind.WORD -> {
+                replaceBefore(currentWord().length, slot.text + " ")
+                autoSpaced = true
+                undoAutocorrect = null
+                gestureWords = null
+            }
+            SlotKind.INFO -> return
+        }
+        lastResult = null
+        if (shiftState == ShiftState.ONE_SHOT) shiftState = ShiftState.OFF
+        updateAutoShift()
+        updateSuggestions()
     }
 
     private fun enterLabelFor(info: EditorInfo?): String {
@@ -536,5 +848,11 @@ class LanguageKeyboardService : InputMethodService(),
     private companion object {
         const val TAG = "LanguageKeyboard"
         const val DOUBLE_TAP_MS = 350L
+
+        /** Punctuation that ends a word (and triggers autocorrect). */
+        val PUNCTUATION = setOf(".", ",", "!", "?", ":", ";", "،", "؟", "؛")
+
+        /** No space is added after these before a swiped word. */
+        const val OPENERS = "([{¿¡\"'“‘«"
     }
 }

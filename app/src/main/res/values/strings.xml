@@ -27,9 +27,25 @@
     <string name="models_failed">Download failed: %1$s</string>
     <string name="same_language">Pick two different languages.</string>
 
-    <string name="section_try">3. Try it</string>
+    <string name="section_typing">3. Typing</string>
+    <string name="gesture_typing">Gesture typing</string>
+    <string name="gesture_typing_summary">Slide across the letters to type a word, without lifting your finger.</string>
+    <string name="show_suggestions">Show suggestions</string>
+    <string name="show_suggestions_summary">Word suggestions above the keys. Ignores accents, so typing \"cancion\" offers \"canción\".</string>
+    <string name="autocorrect">Autocorrect</string>
+    <string name="autocorrect_summary">Fixes typos and missing accents when you press space. Backspace straight after undoes it.</string>
+    <string name="word_lists">Word lists: %1$s</string>
+    <string name="word_list_ready">%1$s ✓</string>
+    <string name="word_list_missing">%1$s (downloads automatically, ~650 KB)</string>
+    <string name="word_list_loading">%1$s (downloading…)</string>
+    <string name="word_list_unsupported">%1$s (not available yet)</string>
+    <string name="download_word_lists">Download word lists now</string>
+    <string name="word_lists_credit">Word lists: FrequencyWords by Hermit Dave, from OpenSubtitles, CC BY-SA 4.0.</string>
+    <string name="suggestions_loading">Getting word list…</string>
+
+    <string name="section_try">4. Try it</string>
     <string name="try_hint">Tap here and type with Language Keyboard</string>
-    <string name="how_to_use">Tips: the ✓ key (where Enter usually is) locks in the current translation. Tap the language chip (ES → EN) above the keys to turn translation off and type straight in your friends\' language; the keys switch to their layout. Long-press a letter for accents, long-press the space bar to switch keyboards.</string>
+    <string name="how_to_use">Tips: the ✓ key (where Enter usually is) locks in the current translation. Tap the language chip (ES → EN) above the keys to turn translation off and type straight in your friends\' language; the keys switch to their layout. Tap a suggestion to use it; tap your own word (in quotes) to keep it and teach it to the keyboard. Long-press a letter for accents, long-press the space bar to switch keyboards.</string>
 
     <string name="strip_hint">Type in %1$s…</string>
     <string name="strip_passthrough">Translation off: typing goes straight in</string>

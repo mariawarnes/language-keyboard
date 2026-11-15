@@ -9,6 +9,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.CompoundButton
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
@@ -31,6 +32,8 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var layoutNote: TextView
     private lateinit var enableButton: Button
     private lateinit var downloadButton: Button
+    private lateinit var wordListStatus: TextView
+    private lateinit var downloadWordsButton: Button
 
     private val languages = Languages.all
     private var downloading = false
@@ -79,6 +82,14 @@ class SettingsActivity : AppCompatActivity() {
 
         downloadButton.setOnClickListener { downloadModels() }
         refreshModelStatus()
+
+        bindSwitch(R.id.gesture_switch, Prefs.KEY_GESTURE_TYPING, Prefs.gestureTyping(this))
+        bindSwitch(R.id.suggestions_switch, Prefs.KEY_SUGGESTIONS, Prefs.suggestions(this))
+        bindSwitch(R.id.autocorrect_switch, Prefs.KEY_AUTOCORRECT, Prefs.autocorrect(this))
+        wordListStatus = findViewById(R.id.word_list_status)
+        downloadWordsButton = findViewById(R.id.download_words_button)
+        downloadWordsButton.setOnClickListener { downloadWordLists() }
+        refreshWordListStatus()
     }
 
     override fun onResume() {
@@ -156,10 +167,45 @@ class SettingsActivity : AppCompatActivity() {
         layoutNote.text = lines.joinToString("\n")
     }
 
+    private fun bindSwitch(id: Int, key: String, value: Boolean) {
+        findViewById<CompoundButton>(id).apply {
+            isChecked = value
+            setOnCheckedChangeListener { _, checked -> Prefs.setFlag(this@SettingsActivity, key, checked) }
+        }
+    }
+
+    private fun wordListLanguages() = listOf(selectedTyping(), selectedOutput()).distinct()
+
+    private fun refreshWordListStatus() {
+        if (!::wordListStatus.isInitialized) return
+        val parts = wordListLanguages().map { code ->
+            val name = Languages.displayName(code)
+            when {
+                !Dictionaries.isSupported(code) -> getString(R.string.word_list_unsupported, name)
+                Dictionaries.isLoading(code) -> getString(R.string.word_list_loading, name)
+                Dictionaries.isDownloaded(this, code) -> getString(R.string.word_list_ready, name)
+                else -> getString(R.string.word_list_missing, name)
+            }
+        }
+        wordListStatus.text = getString(R.string.word_lists, parts.joinToString(", "))
+        downloadWordsButton.isEnabled = wordListLanguages().any {
+            Dictionaries.isSupported(it) && !Dictionaries.isDownloaded(this, it) && !Dictionaries.isLoading(it)
+        }
+    }
+
+    private fun downloadWordLists() {
+        for (code in wordListLanguages()) {
+            if (!Dictionaries.isSupported(code) || Dictionaries.isDownloaded(this, code)) continue
+            Dictionaries.load(this, code, download = true) { if (!isDestroyed) refreshWordListStatus() }
+        }
+        refreshWordListStatus()
+    }
+
     private fun refreshModelStatus() {
         val typing = selectedTyping()
         val output = selectedOutput()
         refreshLayoutNote(typing, output)
+        refreshWordListStatus()
         if (downloading) return
         if (typing == output) {
             modelStatus.setText(R.string.same_language)

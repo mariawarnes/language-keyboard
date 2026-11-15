@@ -32,6 +32,14 @@ text box receives the **translation into your friends' language**, updated live 
 - Password, email, URL and number fields are never translated (and use a plain QWERTY layout).
 - **The keys follow the language you're typing in.** With translation on, you get the layout of the language
   you're practising; with it off, your friends' language's layout. See the list below.
+- **Gesture typing, suggestions and autocorrect** (each can be switched off in settings) work in whichever
+  language you're typing:
+  - Suggestions ignore accents, so `cancion` offers `canción` and `esta` also offers `está` — handy when learning.
+  - Autocorrect fixes typos and missing accents when you press space or punctuation (`tambien` → `también`,
+    `graicas` → `gracias`). Press backspace straight after to undo it.
+  - Your own word appears in quotes on the left of the suggestion bar; tap it to keep it and teach it to the keyboard.
+  - Swipe across the letters to type a word; other guesses appear in the suggestion bar, and backspace removes the
+    whole swiped word.
 - Long-press letters for accents (á, ñ, ü, ß, …) and the top row for digits. Long-press the space bar to switch keyboards.
 
 ## Install
@@ -76,6 +84,11 @@ Or open the folder in Android Studio and press Run.
 | Hebrew, Arabic, Persian, Urdu (phonetic) | Hebrew, Arabic, Persian, Urdu |
 | Georgian | Georgian |
 
+Suggestions, autocorrect and gesture typing use word lists from
+[FrequencyWords](https://github.com/hermitdave/FrequencyWords) by Hermit Dave (built from OpenSubtitles, CC BY-SA 4.0).
+Each language's list (~650 KB) downloads automatically the first time you type in it. Not available yet for
+Belarusian, Haitian Creole, Irish, Maltese, Swahili and Welsh.
+
 ## Limitations (for now)
 
 - No layout yet for Japanese, Chinese, Korean, Thai or the Indian languages (Hindi, Bengali, Tamil, …). These
@@ -83,4 +96,4 @@ Or open the folder in Android Studio and press Run.
   back to QWERTY for now. They still work as the language it's *sent in*.
 - ML Kit's translations are decent but not perfect, and the translation of half a sentence can look odd until you
   finish it.
-- No word suggestions or autocorrect yet.
+- No next-word prediction yet (suggestions are for the word you're typing).

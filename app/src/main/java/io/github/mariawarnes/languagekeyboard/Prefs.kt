@@ -15,6 +15,10 @@ object Prefs {
     const val KEY_OUTPUT_LANGUAGE = "output_language"
 
     const val KEY_TRANSLATE_ENABLED = "translate_enabled"
+    const val KEY_GESTURE_TYPING = "gesture_typing"
+    const val KEY_SUGGESTIONS = "show_suggestions"
+    const val KEY_AUTOCORRECT = "autocorrect"
+    private const val KEY_USER_WORDS = "user_words"
 
     fun get(context: Context): SharedPreferences =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -37,5 +41,26 @@ object Prefs {
 
     fun setTranslateEnabled(context: Context, enabled: Boolean) {
         get(context).edit().putBoolean(KEY_TRANSLATE_ENABLED, enabled).apply()
+    }
+
+    fun gestureTyping(context: Context): Boolean = get(context).getBoolean(KEY_GESTURE_TYPING, true)
+    fun suggestions(context: Context): Boolean = get(context).getBoolean(KEY_SUGGESTIONS, true)
+    fun autocorrect(context: Context): Boolean = get(context).getBoolean(KEY_AUTOCORRECT, true)
+
+    fun setFlag(context: Context, key: String, value: Boolean) {
+        get(context).edit().putBoolean(key, value).apply()
+    }
+
+    /** Words you've chosen to keep as typed, so they're never autocorrected again. */
+    fun userWords(context: Context, language: String): Set<String> {
+        val prefix = "$language|"
+        return get(context).getStringSet(KEY_USER_WORDS, emptySet()).orEmpty()
+            .filter { it.startsWith(prefix) }
+            .mapTo(HashSet()) { it.removePrefix(prefix) }
+    }
+
+    fun addUserWord(context: Context, language: String, word: String) {
+        val all = HashSet(get(context).getStringSet(KEY_USER_WORDS, emptySet()).orEmpty())
+        if (all.add("$language|$word")) get(context).edit().putStringSet(KEY_USER_WORDS, all).apply()
     }
 }

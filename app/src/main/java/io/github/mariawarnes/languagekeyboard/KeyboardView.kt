@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.os.Handler
 import android.os.Looper
@@ -17,6 +18,7 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.hypot
 
 /**
  * A simple drawn keyboard: taps, sliding between keys, long-press for accents (slide to pick,
@@ -31,7 +33,13 @@ class KeyboardView @JvmOverloads constructor(
         fun onText(text: String)
         fun onKey(code: Int)
         fun onSpaceLongPress()
+
+        /** A swipe across the letters (gesture typing), as the finger's x/y positions. */
+        fun onGesture(xs: FloatArray, ys: FloatArray)
     }
+
+    /** Swiping from a letter key types a word instead of sliding between keys. */
+    var gestureEnabled = false
 
     var listener: Listener? = null
 
@@ -118,6 +126,16 @@ class KeyboardView @JvmOverloads constructor(
     private class PlacedKey(val key: Key, val row: Int, val cell: RectF, val face: RectF)
 
     private val placed = ArrayList<PlacedKey>()
+    private var unitWidth = 0f
+
+    /** Centres of the letter keys and the key width, for decoding gestures. */
+    fun keyMap(): GestureDecoder.KeyMap {
+        val centers = HashMap<Char, FloatArray>()
+        for (pk in placed) {
+            if (pk.key.isLetter) centers[pk.key.text!!.lowercase(caseLocale)[0]] = floatArrayOf(pk.face.centerX(), pk.face.centerY())
+        }
+        return GestureDecoder.KeyMap(centers, unitWidth)
+    }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
@@ -135,6 +153,7 @@ class KeyboardView @JvmOverloads constructor(
         val available = width - 2 * padSide
         // Every key in a layout has the same unit width; shorter rows are centred.
         val unit = available / rows.maxOf { row -> row.sumOf { it.width.toDouble() } }.toFloat()
+        unitWidth = unit
         rows.forEachIndexed { r, row ->
             val rowWidth = row.sumOf { it.width.toDouble() }.toFloat() * unit
             var x = padSide + (available - rowWidth) / 2
@@ -163,6 +182,22 @@ class KeyboardView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         for (pk in placed) drawKey(canvas, pk)
         popup?.let { drawPopup(canvas, it) }
+        if (gesturing && gestureXs.size > 1) {
+            trail.rewind()
+            trail.moveTo(gestureXs[0], gestureYs[0])
+            for (i in 1 until gestureXs.size) trail.lineTo(gestureXs[i], gestureYs[i])
+            canvas.drawPath(trail, trailPaint)
+        }
+    }
+
+    private val trail = Path()
+    private val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = dp(6f)
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+        color = colorAccent
+        alpha = 170
     }
 
     private fun displayLabel(key: Key): String = when (key.code) {
@@ -174,7 +209,7 @@ class KeyboardView @JvmOverloads constructor(
 
     private fun drawKey(canvas: Canvas, pk: PlacedKey) {
         val key = pk.key
-        val pressed = pressedKey === pk && popup == null
+        val pressed = pressedKey === pk && popup == null && !gesturing
         val shiftActive = key.code == Codes.SHIFT && shiftState != ShiftState.OFF
 
         val fill = when {
@@ -286,6 +321,13 @@ class KeyboardView @JvmOverloads constructor(
     private var longPressFired = false
     private var repeating = false
 
+    // Gesture typing
+    private var downX = 0f
+    private var downY = 0f
+    private var gesturing = false
+    private val gestureXs = ArrayList<Float>()
+    private val gestureYs = ArrayList<Float>()
+
     private val longPressRunnable = Runnable {
         val pk = pressedKey ?: return@Runnable
         when {
@@ -320,7 +362,7 @@ class KeyboardView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_POINTER_DOWN -> {
                 // A second finger landed: finish the first key straight away (two-thumb typing).
-                if (popup == null) {
+                if (popup == null && !gesturing) {
                     release(commit = true)
                     val index = event.actionIndex
                     activePointerId = event.getPointerId(index)
@@ -354,6 +396,11 @@ class KeyboardView @JvmOverloads constructor(
         pressedKey = pk
         longPressFired = false
         repeating = false
+        downX = x
+        downY = y
+        gesturing = false
+        gestureXs.clear(); gestureYs.clear()
+        gestureXs += x; gestureYs += y
         performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         if (pk.key.repeatable) {
             fire(pk.key)
@@ -371,6 +418,23 @@ class KeyboardView @JvmOverloads constructor(
             return
         }
         if (repeating || longPressFired) return
+        if (gesturing) {
+            val lastX = gestureXs.last()
+            val lastY = gestureYs.last()
+            if (hypot(x - lastX, y - lastY) >= dp(3f)) {
+                gestureXs += x; gestureYs += y
+                invalidate()
+            }
+            return
+        }
+        if (gestureEnabled && pressedKey?.key?.isLetter == true && hypot(x - downX, y - downY) > unitWidth * 0.75f) {
+            // Moved well away from the starting letter: this is a swipe, not a tap.
+            keyHandler.removeCallbacks(longPressRunnable)
+            gesturing = true
+            gestureXs += x; gestureYs += y
+            invalidate()
+            return
+        }
         val pk = keyAt(x, y) ?: return
         if (pk !== pressedKey) {
             // Slid onto a neighbouring key: that's the one that gets typed.
@@ -384,6 +448,11 @@ class KeyboardView @JvmOverloads constructor(
     private fun release(commit: Boolean) {
         keyHandler.removeCallbacks(longPressRunnable)
         keyHandler.removeCallbacks(repeatRunnable)
+        if (gesturing) {
+            if (commit && gestureXs.size > 1) listener?.onGesture(gestureXs.toFloatArray(), gestureYs.toFloatArray())
+            resetTouch()
+            return
+        }
         val pk = pressedKey
         val p = popup
         if (commit && pk != null) {
@@ -403,6 +472,8 @@ class KeyboardView @JvmOverloads constructor(
         popup = null
         longPressFired = false
         repeating = false
+        gesturing = false
+        gestureXs.clear(); gestureYs.clear()
         invalidate()
     }
 
