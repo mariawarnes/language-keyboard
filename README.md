@@ -28,10 +28,13 @@ text box receives the **translation into your friends' language**, updated live 
   When nothing is pending, the key goes back to Enter / Send.
 - Sending the message from the app, or tapping somewhere else in the text, also locks the phrase in.
 - **✕** removes the current phrase from the text box.
-- Tap the **ES → EN** chip to turn translation off and type directly, e.g. for names. Tap it again to turn it back on.
+- The **ES → EN** chip switches between two modes:
+  - **Practice mode** (chip blue): you type in the language you're learning; your friends get it in theirs.
+  - **Direct mode** (chip grey): you type in your own language straight into the app, and the bar above the keys
+    shows it live in the language you're learning, so you still pick some up.
 - Password, email, URL and number fields are never translated (and use a plain QWERTY layout).
 - **The keys follow the language you're typing in.** With translation on, you get the layout of the language
-  you're practising; with it off, your friends' language's layout. See the list below.
+  you're practising; in direct mode, your friends' language's layout. See the list below.
 - **Gesture typing, suggestions and autocorrect** (each can be switched off in settings) work in whichever
   language you're typing:
   - Suggestions ignore accents, so `cancion` offers `canción` and `esta` also offers `está` — handy when learning.
@@ -41,7 +44,7 @@ text box receives the **translation into your friends' language**, updated live 
   - Swipe across the letters to type a word; other guesses appear in the suggestion bar, and backspace removes the
     whole swiped word.
 - **Hold and slide along the space bar** to move the cursor through what you've typed (the practice bar scrolls to
-  follow it), or tap the practice text to put the cursor there. With translation off, the slide moves the cursor
+  follow it), or tap the practice text to put the cursor there. In direct mode, the slide moves the cursor
   in the app's own text box.
 - **Mistakes in the language you're practising get squiggly underlines** in the practice bar, like a word
   processor: red for misspelt words and missing accents, and — if you turn on the online grammar check — blue for

@@ -42,6 +42,30 @@ class LanguageKeyboardService : InputMethodService(),
 
     private lateinit var engine: TranslationEngine
 
+    // --- Direct mode: you type in your own language, the bar shows it in the one you're learning ---
+
+    /** Translates the other way (your language -> the one you're learning) for the live preview. */
+    private lateinit var previewEngine: TranslationEngine
+    private var previewSource = ""
+    private var previewTranslation = ""
+    private var previewGeneration = 0
+
+    private val previewListener = object : TranslationEngine.Listener {
+        override fun onTranslated(request: TranslationEngine.Request, translated: String) {
+            if (request.generation != previewGeneration) return
+            previewTranslation = translated
+            refreshUi()
+        }
+
+        override fun onTranslationFailed(request: TranslationEngine.Request, error: Exception) = Unit
+
+        override fun onEngineStateChanged(state: TranslationEngine.State) {
+            if (state == TranslationEngine.State.READY && previewSource.isNotEmpty() && previewTranslation.isEmpty()) {
+                previewEngine.translate(TranslationEngine.Request(0, previewGeneration, previewSource), immediate = true)
+            }
+        }
+    }
+
     private var keyboardView: KeyboardView? = null
     private var languageChip: TextView? = null
     private var typedText: PracticeTextView? = null
@@ -189,6 +213,7 @@ class LanguageKeyboardService : InputMethodService(),
     override fun onCreate() {
         super.onCreate()
         engine = TranslationEngine(this)
+        previewEngine = TranslationEngine(previewListener)
         translateEnabled = Prefs.translateEnabled(this)
         readTypingOptions()
         Prefs.get(this).registerOnSharedPreferenceChangeListener(this)
@@ -198,6 +223,7 @@ class LanguageKeyboardService : InputMethodService(),
     override fun onDestroy() {
         Prefs.get(this).unregisterOnSharedPreferenceChangeListener(this)
         engine.close()
+        previewEngine.close()
         grammarExecutor.shutdown()
         super.onDestroy()
     }
@@ -287,6 +313,9 @@ class LanguageKeyboardService : InputMethodService(),
     override fun onFinishInput() {
         // The field keeps whatever translation it was showing.
         resetPhrase()
+        previewSource = ""
+        previewTranslation = ""
+        previewGeneration++
         super.onFinishInput()
     }
 
@@ -322,7 +351,42 @@ class LanguageKeyboardService : InputMethodService(),
     private fun configureEngine() {
         val typing = Prefs.typingLanguage(this)
         val output = Prefs.outputLanguage(this)
-        if (typing != output) engine.configure(typing, output)
+        if (typing != output) {
+            engine.configure(typing, output)
+            previewEngine.configure(output, typing)
+        }
+    }
+
+    /**
+     * Direct mode: translate the line you're typing in the app (up to the cursor) into the
+     * language you're learning, for the practice bar.
+     */
+    private fun updatePreview() {
+        val showPreview = !translationActive && !fieldBlocked &&
+            Prefs.typingLanguage(this) != Prefs.outputLanguage(this)
+        var text = if (showPreview) {
+            currentInputConnection?.getTextBeforeCursor(400, 0)?.toString().orEmpty().substringAfterLast('\n')
+        } else {
+            ""
+        }
+        if (text.length > PREVIEW_MAX) {
+            // Keep the end of a long line, starting at a sentence or word break.
+            val tail = text.substring(text.length - PREVIEW_MAX)
+            val sentence = Regex("[.!?]\\s").find(tail)?.range?.last
+            val word = tail.indexOf(' ')
+            text = tail.substring(((sentence ?: word).takeIf { it >= 0 } ?: -1) + 1)
+        }
+        text = text.trim()
+        if (text == previewSource) return
+        previewSource = text
+        previewGeneration++
+        if (text.isEmpty()) {
+            previewEngine.cancelPending()
+            previewTranslation = ""
+            refreshUi()
+        } else {
+            previewEngine.translate(TranslationEngine.Request(0, previewGeneration, text), immediate = false)
+        }
     }
 
     // --- Keys -------------------------------------------------------------------------------
@@ -660,6 +724,7 @@ class LanguageKeyboardService : InputMethodService(),
         }
         if (shiftState == ShiftState.LOCKED) shiftState = ShiftState.OFF
         updateAutoShift()
+        updatePreview()
         refreshUi()
     }
 
@@ -680,6 +745,7 @@ class LanguageKeyboardService : InputMethodService(),
         if (buffer.isEmpty() && composed.isEmpty()) {
             updateAutoShift()
             updateSuggestions()
+            updatePreview()
             return
         }
 
@@ -743,8 +809,10 @@ class LanguageKeyboardService : InputMethodService(),
             val primary = ContextCompat.getColor(this, R.color.strip_text)
             val message: String? = when {
                 fieldBlocked -> getString(R.string.strip_no_translate_field)
-                fieldIsAddress && !addressOverride -> getString(R.string.strip_address_field, chip())
-                !active -> getString(R.string.strip_passthrough)
+                !active && previewSource.isEmpty() ->
+                    if (fieldIsAddress) getString(R.string.strip_address_field, chip())
+                    else getString(R.string.strip_direct_hint, name(output), name(typing))
+                !active -> null
                 engine.state == TranslationEngine.State.DOWNLOADING ->
                     getString(R.string.strip_downloading, name(typing), name(output))
                 engine.state == TranslationEngine.State.DOWNLOAD_FAILED -> getString(R.string.strip_download_failed)
@@ -767,6 +835,13 @@ class LanguageKeyboardService : InputMethodService(),
                 tv.text = text
                 tv.setTextColor(primary)
                 tv.post { scrollPracticeToCursor() }
+            } else if (!active && !fieldBlocked && previewSource.isNotEmpty()) {
+                // Direct mode: your line, live, in the language you're learning.
+                tv.cursorOffset = -1
+                tv.marks = emptyList()
+                tv.text = previewTranslation.ifEmpty { "…" }
+                tv.setTextColor(primary)
+                tv.post { typedText?.let { t -> practiceScroll?.smoothScrollTo(maxOf(0, t.width - (practiceScroll?.width ?: 0)), 0) } }
             } else {
                 tv.cursorOffset = -1
                 tv.marks = emptyList()
@@ -1249,6 +1324,9 @@ class LanguageKeyboardService : InputMethodService(),
         val PUNCTUATION = setOf(".", ",", "!", "?", ":", ";", "،", "؟", "؛")
 
         const val GRAMMAR_DELAY_MS = 1500L
+
+        /** Longest stretch of text the direct-mode preview translates. */
+        const val PREVIEW_MAX = 200
 
         /** A word: letters and combining marks, with apostrophes only inside ("don't", "l'eau"). */
         val WORD = Regex("[\\p{L}\\p{M}]+(?:['’][\\p{L}\\p{M}]+)*")
