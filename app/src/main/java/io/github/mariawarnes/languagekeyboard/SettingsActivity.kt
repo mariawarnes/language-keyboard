@@ -124,8 +124,7 @@ class SettingsActivity : AppCompatActivity() {
         val codes = listOf("") + AppLocale.AVAILABLE
         val labels = codes.map { code ->
             if (code.isEmpty()) {
-                val auto = AppLocale.automatic(this)
-                getString(R.string.app_language_auto, Languages.displayName(auto, auto))
+                getString(R.string.app_language_auto)
             } else {
                 Languages.displayName(code, code) // each language in its own name: "Español"
             }
@@ -280,8 +279,12 @@ class SettingsActivity : AppCompatActivity() {
             downloadButton.isEnabled = false
             return
         }
-        RemoteModelManager.getInstance()
-            .getDownloadedModels(TranslateRemoteModel::class.java)
+        val models = try {
+            RemoteModelManager.getInstance().getDownloadedModels(TranslateRemoteModel::class.java)
+        } catch (e: Exception) {
+            return // ML Kit not available; leave the status empty rather than crash
+        }
+        models
             .addOnSuccessListener { models ->
                 if (downloading || typing != selectedTyping() || output != selectedOutput()) return@addOnSuccessListener
                 val have = models.map { it.language }.toSet()

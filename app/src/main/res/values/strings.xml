@@ -8,7 +8,7 @@
 
     <string name="section_app_language">1. App language</string>
     <string name="label_app_language">Language for these settings and the keyboard\'s messages</string>
-    <string name="app_language_auto">Same as my language (%1$s)</string>
+    <string name="app_language_auto">Same as my language</string>
 
     <string name="section_setup">2. Turn on the keyboard</string>
     <string name="enable_keyboard">Enable in system settings</string>

@@ -6,7 +6,7 @@
 
     <string name="section_app_language">1. Langue de l\'application</string>
     <string name="label_app_language">Langue de ces paramètres et des messages du clavier</string>
-    <string name="app_language_auto">Comme ma langue (%1$s)</string>
+    <string name="app_language_auto">Comme ma langue</string>
 
     <string name="section_setup">2. Activer le clavier</string>
     <string name="enable_keyboard">Activer dans les paramètres système</string>

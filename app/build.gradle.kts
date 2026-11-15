@@ -35,6 +35,10 @@ android {
         }
     }
 
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -54,4 +58,9 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     // On-device translation. Language packs (~30 MB each) are downloaded once, then work offline.
     implementation("com.google.mlkit:translate:17.0.3")
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test:core-ktx:1.6.1")
+    testImplementation("androidx.test.ext:junit:1.2.1")
 }

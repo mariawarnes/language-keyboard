@@ -6,7 +6,7 @@
 
     <string name="section_app_language">1. Idioma do app</string>
     <string name="label_app_language">Idioma destas configurações e das mensagens do teclado</string>
-    <string name="app_language_auto">O mesmo que o meu idioma (%1$s)</string>
+    <string name="app_language_auto">O mesmo que o meu idioma</string>
 
     <string name="section_setup">2. Ativar o teclado</string>
     <string name="enable_keyboard">Ativar nas configurações do sistema</string>

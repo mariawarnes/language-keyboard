@@ -6,7 +6,7 @@
 
     <string name="section_app_language">1. Lingua dell\'app</string>
     <string name="label_app_language">Lingua di queste impostazioni e dei messaggi della tastiera</string>
-    <string name="app_language_auto">Come la mia lingua (%1$s)</string>
+    <string name="app_language_auto">Come la mia lingua</string>
 
     <string name="section_setup">2. Attiva la tastiera</string>
     <string name="enable_keyboard">Attiva nelle impostazioni di sistema</string>
