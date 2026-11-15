@@ -40,17 +40,17 @@ text box receives the **translation into your friends' language**, updated live 
   - Your own word appears in quotes on the left of the suggestion bar; tap it to keep it and teach it to the keyboard.
   - Swipe across the letters to type a word; other guesses appear in the suggestion bar, and backspace removes the
     whole swiped word.
-- **Slide along the space bar** to move the cursor through what you've typed (the practice bar scrolls to
+- **Hold and slide along the space bar** to move the cursor through what you've typed (the practice bar scrolls to
   follow it), or tap the practice text to put the cursor there. With translation off, the slide moves the cursor
   in the app's own text box.
-- **Mistakes in the language you're practising get marked** in the practice bar: misspelt words in red, missing
-  accents in orange, and — if you turn on the online grammar check — grammar problems in blue. Tap a marked word
-  (or the ✎ badge) to see what's wrong and tap a fix. Pressing ✓ while mistakes are marked shows them first;
+- **Mistakes in the language you're practising get squiggly underlines** in the practice bar, like a word
+  processor: red for misspelt words and missing accents, and — if you turn on the online grammar check — blue for
+  grammar problems. Tap a marked word to see what's wrong and tap a fix. Pressing ✓ while mistakes are marked shows them first;
   press ✓ again to send it as it is.
   - Spelling and accent marks work offline from the word lists.
   - Grammar check is optional and off by default: it sends the practice text (not the translation) to
     [LanguageTool](https://languagetool.org)'s free public API when you pause typing.
-- Long-press letters for accents (á, ñ, ü, ß, …) and the top row for digits. Long-press the space bar to switch keyboards.
+- Long-press letters for accents (á, ñ, ü, ß, …) and the top row for digits. Use the 🌐 button under the keyboard to switch keyboards.
 
 ## Install
 

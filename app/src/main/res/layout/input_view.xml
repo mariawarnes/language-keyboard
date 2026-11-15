@@ -49,20 +49,6 @@
                 android:textSize="17sp" />
         </HorizontalScrollView>
 
-        <TextView
-            android:id="@+id/marks_badge"
-            android:layout_width="wrap_content"
-            android:layout_height="28dp"
-            android:layout_marginStart="4dp"
-            android:background="@drawable/strip_chip"
-            android:contentDescription="@string/cd_marks"
-            android:gravity="center"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:textColor="@color/mark_spelling"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
 
         <TextView
             android:id="@+id/translating_indicator"

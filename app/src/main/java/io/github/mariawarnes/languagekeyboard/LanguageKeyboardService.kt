@@ -10,15 +10,12 @@ import android.os.Looper
 import android.text.InputType
 import android.text.SpannableStringBuilder
 import android.text.Spanned
-import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
-import android.text.style.UnderlineSpan
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
 import android.widget.HorizontalScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -130,7 +127,6 @@ class LanguageKeyboardService : InputMethodService(),
     }
 
     private var practiceScroll: HorizontalScrollView? = null
-    private var marksBadge: TextView? = null
     private var correctionPanel: View? = null
     private var correctionMessage: TextView? = null
     private val correctionFixes = arrayOfNulls<TextView>(2)
@@ -208,7 +204,6 @@ class LanguageKeyboardService : InputMethodService(),
         root.findViewById<View>(R.id.settings_button).setOnClickListener { openSettings() }
         suggestionBar = root.findViewById(R.id.suggestions)
         practiceScroll = root.findViewById(R.id.practice_scroll)
-        marksBadge = root.findViewById<TextView>(R.id.marks_badge).also { it.setOnClickListener { selectNextMark() } }
         correctionPanel = root.findViewById(R.id.correction_panel)
         correctionMessage = root.findViewById(R.id.correction_message)
         correctionFixes[0] = root.findViewById(R.id.correction_fix_1)
@@ -226,7 +221,11 @@ class LanguageKeyboardService : InputMethodService(),
         // navigation buttons (the keyboard's background still fills the space behind them).
         ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.displayCutout())
-            v.setPadding(bars.left, 0, bars.right, bars.bottom)
+            // With gesture navigation the reported bar is short (~24dp), but the keyboard's own
+            // ⌄ / 🌐 buttons sit there too, so leave at least 48dp for them.
+            val minimum = (48 * resources.displayMetrics.density).toInt()
+            val bottom = if (bars.bottom > 0) maxOf(bars.bottom, minimum) else 0
+            v.setPadding(bars.left, 0, bars.right, bottom)
             insets
         }
         ViewCompat.requestApplyInsets(root)
@@ -398,11 +397,6 @@ class LanguageKeyboardService : InputMethodService(),
             Codes.MODE_SYMBOLS -> setMode(KeyboardMode.SYMBOLS)
             Codes.MODE_SYMBOLS_2 -> setMode(KeyboardMode.SYMBOLS_2)
         }
-    }
-
-    override fun onSpaceLongPress() {
-        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.showInputMethodPicker()
     }
 
     private fun onDelete() {
@@ -732,15 +726,10 @@ class LanguageKeyboardService : InputMethodService(),
             val marks = visibleMarks()
             if (active && buffer.isNotEmpty()) {
                 val text = SpannableStringBuilder(buffer)
+                val density = resources.displayMetrics.density
                 for (m in marks) {
-                    text.setSpan(ForegroundColorSpan(markColor(m.kind)), m.start, m.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    text.setSpan(UnderlineSpan(), m.start, m.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    if (selectedMark?.sameAs(m) == true) {
-                        text.setSpan(
-                            BackgroundColorSpan(ContextCompat.getColor(this, R.color.mark_selected)),
-                            m.start, m.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                        )
-                    }
+                    val highlight = if (selectedMark?.sameAs(m) == true) ContextCompat.getColor(this, R.color.mark_selected) else null
+                    text.setSpan(SquigglySpan(markColor(m.kind), highlight, density), m.start, m.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
                 // The cursor; spans after it shift along automatically.
                 text.insert(cursor, "▏")
@@ -760,15 +749,9 @@ class LanguageKeyboardService : InputMethodService(),
             }
         }
 
-        marksBadge?.let { badge ->
-            badge.visibility = if (marks().isNotEmpty()) View.VISIBLE else View.GONE
-            badge.text = getString(R.string.marks_badge, marks().size)
-        }
         showCorrection()
         updateSuggestions()
     }
-
-    private fun marks() = visibleMarks()
 
     // --- Practice bar: cursor and marked mistakes -------------------------------------------
 
@@ -832,22 +815,11 @@ class LanguageKeyboardService : InputMethodService(),
         return true
     }
 
-    private fun selectNextMark() {
-        val marks = visibleMarks()
-        if (marks.isEmpty()) return
-        val current = selectedMark
-        val index = if (current == null) 0 else (marks.indexOfFirst { it.sameAs(current) } + 1) % marks.size
-        selectedMark = marks[index]
-        cursor = marks[index].end
-        lastResult = null
-        refreshUi()
-    }
-
     private fun markColor(kind: MarkKind) = ContextCompat.getColor(
         this,
         when (kind) {
-            MarkKind.SPELLING -> R.color.mark_spelling
-            MarkKind.ACCENT -> R.color.mark_accent
+            // Like a word processor: red for spelling (accents included), blue for grammar.
+            MarkKind.SPELLING, MarkKind.ACCENT -> R.color.mark_spelling
             MarkKind.GRAMMAR -> R.color.mark_grammar
         },
     )

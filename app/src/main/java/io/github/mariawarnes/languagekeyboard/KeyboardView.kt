@@ -32,8 +32,6 @@ class KeyboardView @JvmOverloads constructor(
     interface Listener {
         fun onText(text: String)
         fun onKey(code: Int)
-        fun onSpaceLongPress()
-
         /** A swipe across the letters (gesture typing), as the finger's x/y positions. */
         fun onGesture(xs: FloatArray, ys: FloatArray)
 
@@ -338,12 +336,6 @@ class KeyboardView @JvmOverloads constructor(
     private val longPressRunnable = Runnable {
         val pk = pressedKey ?: return@Runnable
         when {
-            pk.key.code == Codes.SPACE -> {
-                longPressFired = true
-                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                listener?.onSpaceLongPress()
-                invalidate()
-            }
             pk.key.alternates.isNotEmpty() -> {
                 longPressFired = true
                 showPopup(pk)
