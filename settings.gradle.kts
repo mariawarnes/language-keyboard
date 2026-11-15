@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "LanguageKeyboard"
 include(":app")
+include(":lens")

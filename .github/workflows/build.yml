@@ -37,8 +37,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk language-keyboard.apk
+          cp lens/build/outputs/apk/debug/lens-debug.apk language-lens.apk
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest language-keyboard.apk \
+          gh release create latest language-keyboard.apk language-lens.apk \
             --prerelease \
             --target "$GITHUB_SHA" \
             --title "Latest build" \

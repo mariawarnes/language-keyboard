@@ -57,6 +57,21 @@ text box receives the **translation into your own language**, updated live as yo
     [LanguageTool](https://languagetool.org)'s free public API when you pause typing.
 - Long-press letters for accents (á, ñ, ü, ß, …) and the top row for digits. Use the 🌐 button under the keyboard to switch keyboards.
 
+## Language Lens (companion app)
+
+**Language Lens** shows the messages you receive in WhatsApp and Messenger in the language you're learning,
+right on top of the originals — no copying or tapping needed. Tap a message to peek at the original, tap again to
+go back; long-press to show or hide every original on screen. A quick-settings tile pauses it.
+
+- It's an Android Accessibility service limited to WhatsApp (and WhatsApp Business) and Messenger (and
+  Messenger Lite). Language detection and translation run on the phone with ML Kit; messages are never stored,
+  logged or sent anywhere. The only internet use is the one-time language-pack download.
+- It's a separate app from the keyboard so each only has the permissions it needs.
+- Because it's installed outside the Play Store, Android 13+ asks you to allow it first: *App info → ⋮ → Allow
+  restricted settings*, then turn it on under *Accessibility*. The app's setup screen walks you through it.
+- Download it from the same release:
+  **https://github.com/mariawarnes/language-keyboard/releases/download/latest/language-lens.apk**
+
 ## Install
 
 The app isn't on the Play Store. Every push builds it and publishes the APK as the **Latest build** release:
