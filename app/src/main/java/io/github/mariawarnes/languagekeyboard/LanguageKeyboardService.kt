@@ -158,11 +158,19 @@ class LanguageKeyboardService : InputMethodService(),
     /** User's on/off switch (the language chip). */
     private var translateEnabled = true
 
-    /** False in password, email, URL, number fields and the like. */
-    private var fieldAllowsTranslation = true
+    /** Password, email, number fields and the like: never translated. */
+    private var fieldBlocked = false
+
+    /** Web-address / search bars: translation starts off, but tapping the chip turns it on here. */
+    private var fieldIsAddress = false
+    private var addressOverride = false
+
+    /** Translation (and the typing aids) can be on in this field right now. */
+    private val fieldAllowsTranslation: Boolean
+        get() = !fieldBlocked && (!fieldIsAddress || addressOverride)
 
     private val translationActive: Boolean
-        get() = translateEnabled && fieldAllowsTranslation &&
+        get() = !fieldBlocked && (if (fieldIsAddress) addressOverride else translateEnabled) &&
             Prefs.typingLanguage(this) != Prefs.outputLanguage(this)
 
     /**
@@ -247,15 +255,19 @@ class LanguageKeyboardService : InputMethodService(),
 
         val cls = attribute.inputType and InputType.TYPE_MASK_CLASS
         val variation = attribute.inputType and InputType.TYPE_MASK_VARIATION
-        fieldAllowsTranslation = cls == InputType.TYPE_CLASS_TEXT && variation !in setOf(
+        fieldBlocked = cls != InputType.TYPE_CLASS_TEXT || variation in setOf(
             InputType.TYPE_TEXT_VARIATION_PASSWORD,
             InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
             InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
             InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
             InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS,
+        )
+        // Browser address bars are also search boxes, so these can be switched on per field.
+        fieldIsAddress = !fieldBlocked && variation in setOf(
             InputType.TYPE_TEXT_VARIATION_URI,
             InputType.TYPE_TEXT_VARIATION_FILTER,
         )
+        addressOverride = false
         mode = when (cls) {
             InputType.TYPE_CLASS_NUMBER, InputType.TYPE_CLASS_PHONE, InputType.TYPE_CLASS_DATETIME -> KeyboardMode.SYMBOLS
             else -> KeyboardMode.LETTERS
@@ -636,10 +648,16 @@ class LanguageKeyboardService : InputMethodService(),
     }
 
     private fun toggleTranslation() {
-        if (!fieldAllowsTranslation) return
+        if (fieldBlocked) return
         lockInPhrase()
-        translateEnabled = !translateEnabled
-        Prefs.setTranslateEnabled(this, translateEnabled)
+        if (fieldIsAddress) {
+            // Just for this address/search bar; doesn't change the setting elsewhere.
+            addressOverride = !addressOverride
+            requestedDictionary = null
+        } else {
+            translateEnabled = !translateEnabled
+            Prefs.setTranslateEnabled(this, translateEnabled)
+        }
         if (shiftState == ShiftState.LOCKED) shiftState = ShiftState.OFF
         updateAutoShift()
         refreshUi()
@@ -714,7 +732,7 @@ class LanguageKeyboardService : InputMethodService(),
                 setColor(ContextCompat.getColor(this@LanguageKeyboardService, if (active) R.color.kb_key_accent else R.color.kb_key_function))
             }
             chip.setTextColor(ContextCompat.getColor(this, if (active) R.color.kb_key_text_on_accent else R.color.kb_key_text))
-            chip.alpha = if (fieldAllowsTranslation) 1f else 0.5f
+            chip.alpha = if (fieldBlocked) 0.5f else 1f
         }
 
         translatingIndicator?.visibility =
@@ -724,7 +742,8 @@ class LanguageKeyboardService : InputMethodService(),
             val secondary = ContextCompat.getColor(this, R.color.strip_text_secondary)
             val primary = ContextCompat.getColor(this, R.color.strip_text)
             val message: String? = when {
-                !fieldAllowsTranslation -> getString(R.string.strip_no_translate_field)
+                fieldBlocked -> getString(R.string.strip_no_translate_field)
+                fieldIsAddress && !addressOverride -> getString(R.string.strip_address_field, chip())
                 !active -> getString(R.string.strip_passthrough)
                 engine.state == TranslationEngine.State.DOWNLOADING ->
                     getString(R.string.strip_downloading, name(typing), name(output))
@@ -829,6 +848,9 @@ class LanguageKeyboardService : InputMethodService(),
         refreshUi()
         return true
     }
+
+    private fun chip() =
+        "${Languages.shortLabel(Prefs.typingLanguage(this))} → ${Languages.shortLabel(Prefs.outputLanguage(this))}"
 
     /** Language names are shown in your own (native) language, not the phone's. */
     private fun name(code: String) = Languages.displayName(code, Prefs.outputLanguage(this))

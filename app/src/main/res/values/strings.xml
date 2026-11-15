@@ -52,7 +52,8 @@
     <string name="strip_downloading">Downloading %1$s → %2$s language pack…</string>
     <string name="strip_download_failed">Couldn\'t download the language pack. Open settings (⚙) to retry.</string>
     <string name="strip_translate_failed">Translation failed</string>
-    <string name="strip_no_translate_field">Translation paused in this field</string>
+    <string name="strip_no_translate_field">Not translated in this field</string>
+    <string name="strip_address_field">Address bar: tap %1$s to translate</string>
     <string name="cd_toggle_translation">Turn translation on or off</string>
     <string name="cd_clear">Clear what you typed</string>
     <string name="cd_settings">Keyboard settings</string>
