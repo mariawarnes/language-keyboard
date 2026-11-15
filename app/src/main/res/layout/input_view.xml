@@ -16,18 +16,37 @@
         android:paddingStart="8dp"
         android:paddingEnd="4dp">
 
-        <TextView
-            android:id="@+id/language_chip"
+        <!-- Which language you're typing in: the language you're learning (practice mode) or
+             your own (direct mode). The highlighted half is the current one; tap either half. -->
+        <LinearLayout
+            android:id="@+id/language_toggle"
             android:layout_width="wrap_content"
-            android:layout_height="28dp"
-            android:background="@drawable/strip_chip"
-            android:contentDescription="@string/cd_toggle_translation"
-            android:gravity="center"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:textColor="@color/strip_text"
-            android:textSize="13sp"
-            android:textStyle="bold" />
+            android:layout_height="30dp"
+            android:orientation="horizontal"
+            android:padding="2dp">
+
+            <TextView
+                android:id="@+id/toggle_learning"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:minWidth="36dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/toggle_native"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:minWidth="36dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <!-- Scrolls sideways to follow the cursor (slide on the space bar, or tap the text). -->
         <HorizontalScrollView

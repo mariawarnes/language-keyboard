@@ -67,7 +67,9 @@ class LanguageKeyboardService : InputMethodService(),
     }
 
     private var keyboardView: KeyboardView? = null
-    private var languageChip: TextView? = null
+    private var languageToggle: View? = null
+    private var toggleLearning: TextView? = null
+    private var toggleNative: TextView? = null
     private var typedText: PracticeTextView? = null
     private var translatingIndicator: TextView? = null
 
@@ -231,8 +233,12 @@ class LanguageKeyboardService : InputMethodService(),
     override fun onCreateInputView(): View {
         val root = layoutInflater.inflate(R.layout.input_view, null)
         keyboardView = root.findViewById<KeyboardView>(R.id.keyboard).also { it.listener = this }
-        languageChip = root.findViewById<TextView>(R.id.language_chip).also { chip ->
-            chip.setOnClickListener { toggleTranslation() }
+        languageToggle = root.findViewById<View>(R.id.language_toggle).also { it.setOnClickListener { toggleTranslation() } }
+        toggleLearning = root.findViewById<TextView>(R.id.toggle_learning).also {
+            it.setOnClickListener { if (!translationActive) toggleTranslation() }
+        }
+        toggleNative = root.findViewById<TextView>(R.id.toggle_native).also {
+            it.setOnClickListener { if (translationActive) toggleTranslation() }
         }
         typedText = root.findViewById(R.id.typed_text)
         translatingIndicator = root.findViewById(R.id.translating_indicator)
@@ -790,15 +796,33 @@ class LanguageKeyboardService : InputMethodService(),
             else name(language)
         }
 
-        languageChip?.let { chip ->
-            // An on/off toggle styled like Shift: blue when translating, grey when not.
-            chip.text = "${Languages.shortLabel(typing)} → ${Languages.shortLabel(output)}"
-            chip.background = GradientDrawable().apply {
-                cornerRadius = 14 * resources.displayMetrics.density
-                setColor(ContextCompat.getColor(this@LanguageKeyboardService, if (active) R.color.kb_key_accent else R.color.kb_key_function))
+        languageToggle?.let { toggle ->
+            // A two-part switch: the highlighted half is the language you're typing in.
+            val density = resources.displayMetrics.density
+            toggle.background = GradientDrawable().apply {
+                cornerRadius = 15 * density
+                setColor(ContextCompat.getColor(this@LanguageKeyboardService, R.color.kb_key_function))
             }
-            chip.setTextColor(ContextCompat.getColor(this, if (active) R.color.kb_key_text_on_accent else R.color.kb_key_text))
-            chip.alpha = if (fieldBlocked) 0.5f else 1f
+            toggle.alpha = if (fieldBlocked) 0.5f else 1f
+            toggle.contentDescription = getString(
+                if (active) R.string.cd_typing_in_learning else R.string.cd_typing_in_native,
+                name(if (active) typing else output),
+            )
+            for ((segment, selected, code) in listOf(
+                Triple(toggleLearning, active, typing),
+                Triple(toggleNative, !active, output),
+            )) {
+                segment ?: continue
+                segment.text = Languages.shortLabel(code)
+                segment.background = if (selected) GradientDrawable().apply {
+                    cornerRadius = 13 * density
+                    setColor(ContextCompat.getColor(this@LanguageKeyboardService, R.color.kb_key_accent))
+                } else null
+                segment.setTextColor(
+                    ContextCompat.getColor(this, if (selected) R.color.kb_key_text_on_accent else R.color.strip_text_secondary),
+                )
+                segment.isEnabled = !fieldBlocked
+            }
         }
 
         translatingIndicator?.visibility =
@@ -810,7 +834,7 @@ class LanguageKeyboardService : InputMethodService(),
             val message: String? = when {
                 fieldBlocked -> getString(R.string.strip_no_translate_field)
                 !active && previewSource.isEmpty() ->
-                    if (fieldIsAddress) getString(R.string.strip_address_field, chip())
+                    if (fieldIsAddress) getString(R.string.strip_address_field, Languages.shortLabel(typing))
                     else getString(R.string.strip_direct_hint, name(output), name(typing))
                 !active -> null
                 engine.state == TranslationEngine.State.DOWNLOADING ->
@@ -923,9 +947,6 @@ class LanguageKeyboardService : InputMethodService(),
         refreshUi()
         return true
     }
-
-    private fun chip() =
-        "${Languages.shortLabel(Prefs.typingLanguage(this))} → ${Languages.shortLabel(Prefs.outputLanguage(this))}"
 
     /** Language names are shown in your own (native) language, not the phone's. */
     private fun name(code: String) = Languages.displayName(code, Prefs.outputLanguage(this))

@@ -9,7 +9,7 @@ text box receives the **translation into your friends' language**, updated live 
 ┌──────────────────────────────────────────────┐
 │ Chat app text box:  "I'm going to the beach" │  ← your friends' language
 ├──────────────────────────────────────────────┤
-│ [ES → EN]  Voy a la playa▏         ✕   ⚙     │  ← what you typed (practice bar)
+│ [ES|EN]  Voy a la playa|           ✕   ⚙     │  ← what you typed (practice bar)
 │  q  w  e  r  t  y  u  i  o  p                │
 │   a  s  d  f  g  h  j  k  l                  │
 │  ⇧  z  x  c  v  b  n  m  ⌫                   │
@@ -28,9 +28,10 @@ text box receives the **translation into your friends' language**, updated live 
   When nothing is pending, the key goes back to Enter / Send.
 - Sending the message from the app, or tapping somewhere else in the text, also locks the phrase in.
 - **✕** removes the current phrase from the text box.
-- The **ES → EN** chip switches between two modes:
-  - **Practice mode** (chip blue): you type in the language you're learning; your friends get it in theirs.
-  - **Direct mode** (chip grey): you type in your own language straight into the app, and the bar above the keys
+- The **ES | EN** switch above the keys shows which language you're typing in (the highlighted half); tap the
+  other half to change:
+  - **ES — practice mode:** you type in the language you're learning; your friends get it in theirs.
+  - **EN — direct mode:** you type in your own language straight into the app, and the bar above the keys
     shows it live in the language you're learning, so you still pick some up.
 - Password, email, URL and number fields are never translated (and use a plain QWERTY layout).
 - **The keys follow the language you're typing in.** With translation on, you get the layout of the language
