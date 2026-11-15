@@ -279,6 +279,7 @@ class LanguageKeyboardService : InputMethodService(),
     override fun onSharedPreferenceChanged(prefs: SharedPreferences, key: String?) {
         when (key) {
             Prefs.KEY_TYPING_LANGUAGE, Prefs.KEY_OUTPUT_LANGUAGE -> {
+                explanationTranslations.clear()
                 lockInPhrase()
                 configureEngine()
             }
@@ -698,8 +699,8 @@ class LanguageKeyboardService : InputMethodService(),
             kv.caseLocale = Locale.forLanguageTag(language)
             kv.shiftState = shiftState
             kv.enterLabel = if (active && buffer.isNotEmpty()) "✓" else enterLabelFor(currentInputEditorInfo)
-            kv.spaceLabel = if (active) "${Languages.displayName(typing)} → ${Languages.displayName(output)}"
-            else Languages.displayName(language)
+            kv.spaceLabel = if (active) "${name(typing)} → ${name(output)}"
+            else name(language)
         }
 
         languageChip?.let { chip ->
@@ -719,7 +720,7 @@ class LanguageKeyboardService : InputMethodService(),
                 !fieldAllowsTranslation -> getString(R.string.strip_no_translate_field)
                 !active -> getString(R.string.strip_passthrough)
                 engine.state == TranslationEngine.State.DOWNLOADING ->
-                    getString(R.string.strip_downloading, Languages.displayName(typing), Languages.displayName(output))
+                    getString(R.string.strip_downloading, name(typing), name(output))
                 engine.state == TranslationEngine.State.DOWNLOAD_FAILED -> getString(R.string.strip_download_failed)
                 else -> statusMessage
             }
@@ -743,7 +744,7 @@ class LanguageKeyboardService : InputMethodService(),
                 tv.setTextColor(primary)
                 tv.post { scrollPracticeToCursor() }
             } else {
-                tv.text = message ?: getString(R.string.strip_hint, Languages.displayName(typing))
+                tv.text = message ?: getString(R.string.strip_hint, name(typing))
                 tv.setTextColor(secondary)
                 practiceScroll?.scrollTo(0, 0)
             }
@@ -813,6 +814,27 @@ class LanguageKeyboardService : InputMethodService(),
         updateAutoShift()
         refreshUi()
         return true
+    }
+
+    /** Language names are shown in your own (native) language, not the phone's. */
+    private fun name(code: String) = Languages.displayName(code, Prefs.outputLanguage(this))
+
+    /** Grammar explanations, translated into your own language (original -> translation). */
+    private val explanationTranslations = HashMap<String, String>()
+
+    private fun translateExplanations(marks: List<Mark>) {
+        for (message in marks.mapNotNull { it.message }.distinct()) {
+            if (message in explanationTranslations) continue
+            explanationTranslations[message] = message // placeholder so it's only requested once
+            engine.translateText(message) { translated ->
+                if (translated != null) {
+                    explanationTranslations[message] = translated
+                    refreshUi()
+                } else {
+                    explanationTranslations.remove(message) // try again next time
+                }
+            }
+        }
     }
 
     private fun markColor(kind: MarkKind) = ContextCompat.getColor(
@@ -924,6 +946,7 @@ class LanguageKeyboardService : InputMethodService(),
                     lastGrammarText = "" // try again after the next pause
                 } else {
                     grammarMarks = marks
+                    translateExplanations(marks)
                     refreshUi()
                 }
             }
@@ -941,15 +964,15 @@ class LanguageKeyboardService : InputMethodService(),
             return
         }
         panel.visibility = View.VISIBLE
-        val languageName = Languages.displayName(Prefs.typingLanguage(this))
+        val languageName = name(Prefs.typingLanguage(this))
         correctionMessage?.text = when (mark.kind) {
             MarkKind.ACCENT -> getString(R.string.mark_accent, mark.original, mark.replacements.firstOrNull().orEmpty())
-            MarkKind.SPELLING -> mark.message ?: if (mark.replacements.isNotEmpty()) {
+            MarkKind.SPELLING -> mark.message?.let { explanation(it) } ?: if (mark.replacements.isNotEmpty()) {
                 getString(R.string.mark_spelling_fix, mark.original)
             } else {
                 getString(R.string.mark_spelling, mark.original, languageName)
             }
-            MarkKind.GRAMMAR -> mark.message.orEmpty() +
+            MarkKind.GRAMMAR -> explanation(mark.message.orEmpty()) +
                 if (mark.replacements.isEmpty()) "\n" + getString(R.string.mark_no_fix) else ""
         }
         correctionFixes.forEachIndexed { i, view ->
@@ -959,6 +982,9 @@ class LanguageKeyboardService : InputMethodService(),
             view?.setOnClickListener(if (fix != null) View.OnClickListener { applyFix(mark, fix) } else null)
         }
     }
+
+    /** LanguageTool explains in the language being checked; show it in your own language. */
+    private fun explanation(message: String) = explanationTranslations[message] ?: message
 
     private fun applyFix(mark: Mark, replacement: String) {
         if (mark.end > buffer.length || buffer.substring(mark.start, mark.end) != mark.original) return

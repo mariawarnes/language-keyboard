@@ -35,7 +35,11 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var wordListStatus: TextView
     private lateinit var downloadWordsButton: Button
 
-    private val languages = Languages.all
+    private var languages: List<String> = emptyList()
+
+    /** The language the spinner lists are currently written in (your native language). */
+    private var namesLanguage = ""
+    private var updatingSpinners = false
     private var downloading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,15 +63,12 @@ class SettingsActivity : AppCompatActivity() {
             inputMethodManager().showInputMethodPicker()
         }
 
-        val names = languages.map { Languages.displayName(it) }
-        for (spinner in listOf(typingSpinner, outputSpinner)) {
-            spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, names)
-        }
-        typingSpinner.setSelection(indexOf(Prefs.typingLanguage(this)), false)
-        outputSpinner.setSelection(indexOf(Prefs.outputLanguage(this)), false)
+        fillLanguageLists()
 
         val onChange = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = saveLanguages()
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (!updatingSpinners) saveLanguages()
+            }
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
         typingSpinner.onItemSelectedListener = onChange
@@ -107,6 +108,25 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun inputMethodManager() = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
 
+    /** Language names are shown in your native language (the one messages get sent in). */
+    private fun name(code: String) = Languages.displayName(code, Prefs.outputLanguage(this))
+
+    /** (Re)build both language lists, named and sorted in your native language. */
+    private fun fillLanguageLists() {
+        val native = Prefs.outputLanguage(this)
+        namesLanguage = native
+        languages = Languages.all(native)
+        val names = languages.map { Languages.displayName(it, native) }
+        updatingSpinners = true
+        for (spinner in listOf(typingSpinner, outputSpinner)) {
+            spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, names)
+        }
+        typingSpinner.setSelection(indexOf(Prefs.typingLanguage(this)), false)
+        outputSpinner.setSelection(indexOf(native), false)
+        // Selection callbacks from the new adapters arrive after layout; ignore those.
+        typingSpinner.post { updatingSpinners = false }
+    }
+
     private fun indexOf(code: String) = languages.indexOf(code).coerceAtLeast(0)
 
     private fun selectedTyping() = languages[typingSpinner.selectedItemPosition]
@@ -117,6 +137,10 @@ class SettingsActivity : AppCompatActivity() {
         val output = selectedOutput()
         if (typing != Prefs.typingLanguage(this) || output != Prefs.outputLanguage(this)) {
             Prefs.setLanguages(this, typing, output)
+        }
+        if (output != namesLanguage) {
+            // Your native language changed: show the language names in it.
+            typingSpinner.post { fillLanguageLists() }
         }
         refreshModelStatus()
     }
@@ -160,11 +184,11 @@ class SettingsActivity : AppCompatActivity() {
         val outputLayout = LanguageLayouts.forLanguage(output)
         val lines = mutableListOf(
             if (typingLayout.dedicated) getString(R.string.layout_note, typingLayout.name)
-            else getString(R.string.layout_missing, Languages.displayName(typing))
+            else getString(R.string.layout_missing, name(typing))
         )
         if (outputLayout.name != typingLayout.name) {
-            lines += getString(R.string.layout_note_off, Languages.displayName(output))
-            if (!outputLayout.dedicated) lines += getString(R.string.layout_missing, Languages.displayName(output))
+            lines += getString(R.string.layout_note_off, name(output))
+            if (!outputLayout.dedicated) lines += getString(R.string.layout_missing, name(output))
         }
         layoutNote.text = lines.joinToString("\n")
     }
@@ -181,12 +205,12 @@ class SettingsActivity : AppCompatActivity() {
     private fun refreshWordListStatus() {
         if (!::wordListStatus.isInitialized) return
         val parts = wordListLanguages().map { code ->
-            val name = Languages.displayName(code)
+            val languageName = name(code)
             when {
-                !Dictionaries.isSupported(code) -> getString(R.string.word_list_unsupported, name)
-                Dictionaries.isLoading(code) -> getString(R.string.word_list_loading, name)
-                Dictionaries.isDownloaded(this, code) -> getString(R.string.word_list_ready, name)
-                else -> getString(R.string.word_list_missing, name)
+                !Dictionaries.isSupported(code) -> getString(R.string.word_list_unsupported, languageName)
+                Dictionaries.isLoading(code) -> getString(R.string.word_list_loading, languageName)
+                Dictionaries.isDownloaded(this, code) -> getString(R.string.word_list_ready, languageName)
+                else -> getString(R.string.word_list_missing, languageName)
             }
         }
         wordListStatus.text = getString(R.string.word_lists, parts.joinToString(", "))
@@ -204,11 +228,11 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun refreshCheckingSection(typing: String) {
-        val name = Languages.displayName(typing)
-        findViewById<TextView>(R.id.checking_title).text = getString(R.string.section_checking, name)
+        val languageName = name(typing)
+        findViewById<TextView>(R.id.checking_title).text = getString(R.string.section_checking, languageName)
         findViewById<TextView>(R.id.grammar_note).apply {
             visibility = if (LanguageTool.isSupported(typing)) View.GONE else View.VISIBLE
-            text = getString(R.string.grammar_unsupported, name)
+            text = getString(R.string.grammar_unsupported, languageName)
         }
     }
 

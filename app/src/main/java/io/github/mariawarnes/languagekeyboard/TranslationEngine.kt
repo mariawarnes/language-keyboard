@@ -97,6 +97,21 @@ class TranslationEngine(private val listener: Listener) {
         handler.postDelayed(task, if (immediate) 0L else DEBOUNCE_MS)
     }
 
+    /**
+     * Translate some other text with the same language pair (e.g. a grammar explanation), outside
+     * the typing flow. Calls back with null if the language pack isn't ready or it fails.
+     */
+    fun translateText(text: String, callback: (String?) -> Unit) {
+        val client = translator
+        if (client == null || state != State.READY) {
+            callback(null)
+            return
+        }
+        client.translate(text)
+            .addOnSuccessListener { callback(it) }
+            .addOnFailureListener { callback(null) }
+    }
+
     fun cancelPending() {
         debounced?.let { handler.removeCallbacks(it) }
         debounced = null
