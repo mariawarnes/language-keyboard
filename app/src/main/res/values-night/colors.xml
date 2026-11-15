@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="kb_background">#FF202124</color>
+    <color name="kb_key">#FF3C4043</color>
+    <color name="kb_key_pressed">#FF5F6368</color>
+    <color name="kb_key_function">#FF2D2F31</color>
+    <color name="kb_key_accent">#FF8AB4F8</color>
+    <color name="kb_key_text">#FFE8EAED</color>
+    <color name="kb_key_text_on_accent">#FF202124</color>
+    <color name="kb_key_hint">#FF9AA0A6</color>
+    <color name="kb_popup">#FF3C4043</color>
+    <color name="kb_popup_selected">#FF8AB4F8</color>
+    <color name="strip_background">#FF2D2F31</color>
+    <color name="strip_text">#FFE8EAED</color>
+    <color name="strip_text_secondary">#FF9AA0A6</color>
+    <color name="strip_chip">#FF394457</color>
+    <color name="strip_chip_off">#FF3C4043</color>
+    <color name="brand">#FF8AB4F8</color>
+</resources>

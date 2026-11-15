@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Language Keyboard</string>
+    <string name="ime_name">Language Keyboard</string>
+    <string name="ime_subtype_label">Practice and translate</string>
+
+    <string name="settings_intro">Type in the language you are learning. Your friends receive it translated into their language, and you see what you typed in a small window above the keys.</string>
+
+    <string name="section_setup">1. Turn on the keyboard</string>
+    <string name="enable_keyboard">Enable in system settings</string>
+    <string name="choose_keyboard">Switch to Language Keyboard</string>
+    <string name="status_enabled">Enabled ✓</string>
+    <string name="status_not_enabled">Not enabled yet</string>
+    <string name="status_selected">Enabled and selected ✓</string>
+
+    <string name="section_languages">2. Choose your languages</string>
+    <string name="label_typing_language">I type in (the language I\'m practising)</string>
+    <string name="label_output_language">It gets sent in (my friends\' language)</string>
+    <string name="swap_languages">Swap</string>
+    <string name="download_models">Download language packs</string>
+    <string name="models_ready">Language packs ready ✓ — translation works offline.</string>
+    <string name="models_missing">Language packs need downloading (about 30 MB each).</string>
+    <string name="models_downloading">Downloading language packs…</string>
+    <string name="models_failed">Download failed: %1$s</string>
+    <string name="same_language">Pick two different languages.</string>
+
+    <string name="section_try">3. Try it</string>
+    <string name="try_hint">Tap here and type with Language Keyboard</string>
+    <string name="how_to_use">Tips: the ✓ key (where Enter usually is) locks in the current translation. Tap ⇄ on the bar above the keys to turn translation off, for names or words that shouldn\'t change. Long-press a letter for accents, long-press the space bar to switch keyboards.</string>
+
+    <string name="strip_hint">Type in %1$s…</string>
+    <string name="strip_passthrough">Translation off: typing goes straight in</string>
+    <string name="strip_downloading">Downloading %1$s → %2$s language pack…</string>
+    <string name="strip_download_failed">Couldn\'t download the language pack. Open settings (⚙) to retry.</string>
+    <string name="strip_translate_failed">Translation failed</string>
+    <string name="strip_no_translate_field">Translation paused in this field</string>
+    <string name="cd_toggle_translation">Turn translation on or off</string>
+    <string name="cd_clear">Clear what you typed</string>
+    <string name="cd_settings">Keyboard settings</string>
+</resources>
