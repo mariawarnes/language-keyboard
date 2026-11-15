@@ -236,6 +236,11 @@ class KeyboardView @JvmOverloads constructor(
             else -> sp(15f)
         }
         if (key.code == Codes.SPACE) textPaint.color = colorHint
+        // Longer words (e.g. "Siguiente" on the Enter key) shrink to fit their key.
+        if (key.code != Codes.SPACE && label.length > 2) {
+            val room = face.width() - dp(8f)
+            while (textPaint.textSize > sp(9f) && textPaint.measureText(label) > room) textPaint.textSize -= sp(0.5f)
+        }
         val icon = iconFor(key)
         if (icon != null) {
             drawIcon(canvas, face, icon, textPaint.color, filled = key.code == Codes.SHIFT && shiftState == ShiftState.LOCKED)

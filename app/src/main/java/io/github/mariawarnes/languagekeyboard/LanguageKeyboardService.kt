@@ -4,6 +4,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.annotation.SuppressLint
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.inputmethodservice.InputMethodService
 import android.os.Handler
 import android.os.Looper
@@ -706,9 +707,13 @@ class LanguageKeyboardService : InputMethodService(),
         }
 
         languageChip?.let { chip ->
-            chip.text = if (active) "${Languages.shortLabel(typing)} → ${Languages.shortLabel(output)}"
-            else "${Languages.shortLabel(typing)} → ${Languages.shortLabel(output)}  off"
-            chip.setBackgroundResource(if (active) R.drawable.strip_chip else R.drawable.strip_chip_off)
+            // An on/off toggle styled like Shift: blue when translating, grey when not.
+            chip.text = "${Languages.shortLabel(typing)} → ${Languages.shortLabel(output)}"
+            chip.background = GradientDrawable().apply {
+                cornerRadius = 14 * resources.displayMetrics.density
+                setColor(ContextCompat.getColor(this@LanguageKeyboardService, if (active) R.color.kb_key_accent else R.color.kb_key_function))
+            }
+            chip.setTextColor(ContextCompat.getColor(this, if (active) R.color.kb_key_text_on_accent else R.color.kb_key_text))
             chip.alpha = if (fieldAllowsTranslation) 1f else 0.5f
         }
 
@@ -1200,13 +1205,15 @@ class LanguageKeyboardService : InputMethodService(),
 
     private fun enterLabelFor(info: EditorInfo?): String {
         if (info == null || (info.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0) return "⏎"
+        // "Send" and "Search" are shown as icons; the other actions as words in the language being typed.
+        val language = layoutLanguage
         return when (info.imeOptions and EditorInfo.IME_MASK_ACTION) {
             EditorInfo.IME_ACTION_SEND -> "Send"
-            EditorInfo.IME_ACTION_GO -> "Go"
             EditorInfo.IME_ACTION_SEARCH -> "Search"
-            EditorInfo.IME_ACTION_NEXT -> "Next"
-            EditorInfo.IME_ACTION_PREVIOUS -> "Prev"
-            EditorInfo.IME_ACTION_DONE -> "Done"
+            EditorInfo.IME_ACTION_GO -> ActionLabels.label(ActionLabels.Action.GO, language)
+            EditorInfo.IME_ACTION_NEXT -> ActionLabels.label(ActionLabels.Action.NEXT, language)
+            EditorInfo.IME_ACTION_PREVIOUS -> ActionLabels.label(ActionLabels.Action.PREVIOUS, language)
+            EditorInfo.IME_ACTION_DONE -> ActionLabels.label(ActionLabels.Action.DONE, language)
             else -> "⏎"
         }
     }
