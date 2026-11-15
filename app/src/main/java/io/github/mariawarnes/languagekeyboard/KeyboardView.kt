@@ -251,7 +251,7 @@ class KeyboardView @JvmOverloads constructor(
 
     // --- Function-key icons -----------------------------------------------------------------
 
-    private enum class Icon { SHIFT, DELETE, RETURN, CHECK }
+    private enum class Icon { SHIFT, DELETE, RETURN, CHECK, SEND, SEARCH }
 
     /** Shift, delete and enter are drawn as icons in one line style; other keys use text. */
     private fun iconFor(key: Key): Icon? = when (key.code) {
@@ -260,7 +260,9 @@ class KeyboardView @JvmOverloads constructor(
         Codes.ENTER -> when (enterLabel) {
             "⏎" -> Icon.RETURN
             "✓" -> Icon.CHECK
-            else -> null // "Send", "Go", "Search"… stay as words
+            "Send" -> Icon.SEND
+            "Search" -> Icon.SEARCH
+            else -> null // "Go", "Next", "Done"… stay as words
         }
         else -> null
     }
@@ -321,6 +323,22 @@ class KeyboardView @JvmOverloads constructor(
                 iconPath.moveTo(4f, 12.5f)
                 iconPath.lineTo(9.5f, 18f)
                 iconPath.lineTo(20f, 6.5f)
+            }
+            Icon.SEND -> {
+                // Paper plane pointing right.
+                iconPath.moveTo(3.5f, 4.5f)
+                iconPath.lineTo(21f, 12f)
+                iconPath.lineTo(3.5f, 19.5f)
+                iconPath.lineTo(6.5f, 12f)
+                iconPath.close()
+                iconPath.moveTo(6.5f, 12f)
+                iconPath.lineTo(12.5f, 12f)
+            }
+            Icon.SEARCH -> {
+                // Magnifying glass.
+                iconPath.addCircle(10.5f, 10.5f, 6.5f, Path.Direction.CW)
+                iconPath.moveTo(15.3f, 15.3f)
+                iconPath.lineTo(20.5f, 20.5f)
             }
         }
         canvas.drawPath(iconPath, iconPaint)
