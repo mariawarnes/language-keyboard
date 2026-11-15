@@ -38,7 +38,8 @@
         <Spinner
             android:id="@+id/app_language"
             android:layout_width="match_parent"
-            android:layout_height="48dp" />
+            android:layout_height="48dp"
+            android:saveEnabled="false" />
 
         <!-- 2. Enable -->
         <TextView
@@ -79,7 +80,8 @@
         <Spinner
             android:id="@+id/typing_language"
             android:layout_width="match_parent"
-            android:layout_height="48dp" />
+            android:layout_height="48dp"
+            android:saveEnabled="false" />
 
         <TextView
             android:layout_width="match_parent"
@@ -91,7 +93,8 @@
         <Spinner
             android:id="@+id/output_language"
             android:layout_width="match_parent"
-            android:layout_height="48dp" />
+            android:layout_height="48dp"
+            android:saveEnabled="false" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/swap_button"
