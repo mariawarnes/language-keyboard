@@ -57,19 +57,24 @@ text box receives the **translation into your friends' language**, updated live 
 
 ## Install
 
-The app isn't on the Play Store. To install it:
+The app isn't on the Play Store. Every push builds it and publishes the APK as the **Latest build** release:
 
-1. Open the repository's **Actions** tab on GitHub, choose the latest successful **Build APK** run, and download
-   the `language-keyboard-debug-apk` artifact (a zip containing `app-debug.apk`).
-2. Copy the APK to your phone and open it. Android will ask you to allow installing apps from that source.
-3. Open **Language Keyboard** and follow the three steps on screen:
+1. On your phone, open
+   **https://github.com/mariawarnes/language-keyboard/releases/download/latest/language-keyboard.apk**
+   (or the repository's **Releases** page → *Latest build* → `language-keyboard.apk`).
+2. Open the downloaded file. Android will ask you to allow installing apps from that source. If Play Protect
+   warns about it, choose **More details → Install anyway**.
+3. Open **Language Keyboard** and follow the steps on screen:
    1. Enable the keyboard in system settings, then switch to it.
    2. Choose the language you type in and the language it gets sent in, then tap **Download language packs**
       (Wi-Fi recommended).
    3. Try it in the test box.
 
+Later builds install as updates over the previous one (they're all signed with the same key), keeping your settings.
+
 When you enable any third-party keyboard, Android warns that it could collect what you type. This one has no
-analytics and only uses the internet to download ML Kit language packs.
+analytics; it only uses the internet to download language packs and word lists, and (only if you turn it on) for
+the online grammar check.
 
 ## Build it yourself
 
