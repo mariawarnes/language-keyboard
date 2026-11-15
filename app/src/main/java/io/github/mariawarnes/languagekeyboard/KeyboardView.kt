@@ -13,7 +13,10 @@ import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import androidx.core.content.ContextCompat
+import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
 
 /**
  * A simple drawn keyboard: taps, sliding between keys, long-press for accents (slide to pick,
@@ -67,7 +70,12 @@ class KeyboardView @JvmOverloads constructor(
             }
         }
 
+    /** Language used for capitals, so Turkish i becomes İ rather than I. */
+    var caseLocale: Locale = Locale.ROOT
+
     private val isShifted get() = shiftState != ShiftState.OFF
+
+    private fun cased(s: String) = if (isShifted) s.uppercase(caseLocale) else s
 
     // --- Dimensions -------------------------------------------------------------------------
 
@@ -125,9 +133,11 @@ class KeyboardView @JvmOverloads constructor(
         placed.clear()
         if (width == 0) return
         val available = width - 2 * padSide
+        // Every key in a layout has the same unit width; shorter rows are centred.
+        val unit = available / rows.maxOf { row -> row.sumOf { it.width.toDouble() } }.toFloat()
         rows.forEachIndexed { r, row ->
-            val unit = available / row.sumOf { it.width.toDouble() }.toFloat()
-            var x = padSide
+            val rowWidth = row.sumOf { it.width.toDouble() }.toFloat() * unit
+            var x = padSide + (available - rowWidth) / 2
             val top = padTop + r * rowHeight
             for (key in row) {
                 val w = key.width * unit
@@ -159,7 +169,7 @@ class KeyboardView @JvmOverloads constructor(
         Codes.SHIFT -> if (shiftState == ShiftState.LOCKED) "⇪" else "⇧"
         Codes.ENTER -> enterLabel
         Codes.SPACE -> spaceLabel
-        else -> if (isShifted && key.isLetter) key.label.uppercase() else key.label
+        else -> if (key.isLetter) cased(key.label) else key.label
     }
 
     private fun drawKey(canvas: Canvas, pk: PlacedKey) {
@@ -197,29 +207,48 @@ class KeyboardView @JvmOverloads constructor(
 
     // --- Long-press popup -------------------------------------------------------------------
 
-    private class Popup(val options: List<String>, val bounds: RectF, val cellWidth: Float) {
+    /**
+     * Options laid out in rows of up to [cols], growing upwards from just above the key:
+     * row 0 (nearest your finger) holds the first options.
+     */
+    private class Popup(
+        val options: List<String>,
+        val bounds: RectF,
+        val cellWidth: Float,
+        val cellHeight: Float,
+        val cols: Int,
+    ) {
         var selected = 0
+        val rowCount get() = (options.size + cols - 1) / cols
     }
 
     private var popup: Popup? = null
 
     private fun showPopup(pk: PlacedKey) {
-        val options = pk.key.alternates.map { if (isShifted && it.length == 1 && it[0].isLetter()) it.uppercase() else it }
+        val options = pk.key.alternates.map { if (it.length == 1 && it[0].isLetter()) cased(it) else it }
         val cellWidth = maxOf(pk.face.width(), dp(36f))
-        val total = cellWidth * options.size
+        val cellHeight = rowHeight - gapY
+        val maxCols = floor((width - 2 * padSide) / cellWidth).toInt().coerceIn(1, 8)
+        val cols = minOf(options.size, maxCols)
+        val rowCount = ceil(options.size / cols.toFloat()).toInt()
+        val totalWidth = cellWidth * cols
+        val totalHeight = cellHeight * rowCount
+
         var left = pk.face.centerX() - cellWidth / 2
-        left = left.coerceAtMost(width - padSide - total).coerceAtLeast(padSide)
-        val top = (pk.face.top - rowHeight).coerceAtLeast(0f)
-        popup = Popup(options, RectF(left, top, left + total, top + rowHeight - gapY), cellWidth).also {
-            it.selected = (((pk.face.centerX() - left) / cellWidth).toInt()).coerceIn(0, options.size - 1)
+        left = left.coerceAtMost(width - padSide - totalWidth).coerceAtLeast(padSide)
+        val top = (pk.face.top - totalHeight).coerceAtLeast(0f)
+        popup = Popup(options, RectF(left, top, left + totalWidth, top + totalHeight), cellWidth, cellHeight, cols).also {
+            it.selected = ((pk.face.centerX() - left) / cellWidth).toInt().coerceIn(0, cols - 1)
         }
         performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
         invalidate()
     }
 
-    private fun updatePopupSelection(x: Float) {
+    private fun updatePopupSelection(x: Float, y: Float) {
         val p = popup ?: return
-        val index = ((x - p.bounds.left) / p.cellWidth).toInt().coerceIn(0, p.options.size - 1)
+        val col = ((x - p.bounds.left) / p.cellWidth).toInt().coerceIn(0, p.cols - 1)
+        val row = ((p.bounds.bottom - y) / p.cellHeight).toInt().coerceIn(0, p.rowCount - 1)
+        val index = (row * p.cols + col).coerceAtMost(p.options.size - 1)
         if (index != p.selected) {
             p.selected = index
             invalidate()
@@ -233,13 +262,18 @@ class KeyboardView @JvmOverloads constructor(
         canvas.drawRoundRect(b, corner, corner, keyPaint)
         textPaint.textSize = sp(22f)
         p.options.forEachIndexed { i, option ->
-            val cellLeft = b.left + i * p.cellWidth
+            val cellLeft = b.left + (i % p.cols) * p.cellWidth
+            val cellBottom = b.bottom - (i / p.cols) * p.cellHeight
+            val cellTop = cellBottom - p.cellHeight
             if (i == p.selected) {
                 keyPaint.color = colorPopupSelected
-                canvas.drawRoundRect(cellLeft + dp(2f), b.top + dp(2f), cellLeft + p.cellWidth - dp(2f), b.bottom - dp(2f), corner, corner, keyPaint)
+                canvas.drawRoundRect(
+                    cellLeft + dp(2f), cellTop + dp(2f), cellLeft + p.cellWidth - dp(2f), cellBottom - dp(2f),
+                    corner, corner, keyPaint,
+                )
             }
             textPaint.color = if (i == p.selected) colorTextOnAccent else colorText
-            val baseline = b.centerY() - (textPaint.descent() + textPaint.ascent()) / 2
+            val baseline = (cellTop + cellBottom) / 2 - (textPaint.descent() + textPaint.ascent()) / 2
             canvas.drawText(option, cellLeft + p.cellWidth / 2, baseline, textPaint)
         }
     }
@@ -333,7 +367,7 @@ class KeyboardView @JvmOverloads constructor(
 
     private fun move(x: Float, y: Float) {
         if (popup != null) {
-            updatePopupSelection(x)
+            updatePopupSelection(x, y)
             return
         }
         if (repeating || longPressFired) return
@@ -375,7 +409,7 @@ class KeyboardView @JvmOverloads constructor(
     private fun fire(key: Key) {
         val text = key.text
         if (text != null) {
-            listener?.onText(if (isShifted && key.isLetter) text.uppercase() else text)
+            listener?.onText(if (key.isLetter) cased(text) else text)
         } else if (key.code != Codes.NONE) {
             listener?.onKey(key.code)
         }

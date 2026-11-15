@@ -35,71 +35,70 @@ data class Key(
 
 enum class KeyboardMode { LETTERS, SYMBOLS, SYMBOLS_2 }
 
+/**
+ * Builds the key rows. Rows narrower than the widest one are centred by [KeyboardView],
+ * so a 9-key middle row sits between the keys above it, like on a normal phone keyboard.
+ */
 object KeyboardLayouts {
 
-    private fun letter(c: String, alternates: String = "", hint: String? = null) =
-        Key(c, alternates = alternates.split(' ').filter { it.isNotEmpty() }, hint = hint)
+    private fun split(s: String) = s.split(' ').filter { it.isNotEmpty() }
 
-    private fun sym(c: String, alternates: String = "") =
-        Key(c, alternates = alternates.split(' ').filter { it.isNotEmpty() })
+    private fun sym(c: String, alternates: String = "") = Key(c, alternates = split(alternates))
 
-    private fun spacer(width: Float) = Key("", text = null, width = width, style = KeyStyle.SPACER)
+    private fun shift(width: Float) =
+        Key("⇧", text = null, code = Codes.SHIFT, width = width, style = KeyStyle.FUNCTION)
 
-    private val shift = Key("⇧", text = null, code = Codes.SHIFT, width = 1.5f, style = KeyStyle.FUNCTION)
-    private val delete = Key("⌫", text = null, code = Codes.DELETE, width = 1.5f, style = KeyStyle.FUNCTION, repeatable = true)
+    private fun delete(width: Float) =
+        Key("⌫", text = null, code = Codes.DELETE, width = width, style = KeyStyle.FUNCTION, repeatable = true)
 
-    private fun bottomRow(modeKey: Key) = listOf(
-        modeKey,
-        sym(",", "' \" : ; - _"),
-        Key("", text = null, code = Codes.SPACE, width = 5f),
-        sym(".", "? ! … ¿ ¡ - :"),
-        Key("⏎", text = null, code = Codes.ENTER, width = 1.5f, style = KeyStyle.ACCENT),
-    )
-
-    private val toSymbols = Key("?123", text = null, code = Codes.MODE_SYMBOLS, width = 1.5f, style = KeyStyle.FUNCTION)
-    private val toLetters = Key("ABC", text = null, code = Codes.MODE_LETTERS, width = 1.5f, style = KeyStyle.FUNCTION)
-
-    val LETTERS: List<List<Key>> = listOf(
+    private fun bottomRow(total: Float, modeKey: Key, comma: String, commaAlternates: String, periodAlternates: String) =
         listOf(
-            letter("q", "1", "1"),
-            letter("w", "2", "2"),
-            letter("e", "3 é è ê ë ē ę ě", "3"),
-            letter("r", "4 ř", "4"),
-            letter("t", "5 ť þ", "5"),
-            letter("y", "6 ý ÿ", "6"),
-            letter("u", "7 ú ù û ü ū ů ű", "7"),
-            letter("i", "8 í ì î ï ī ı", "8"),
-            letter("o", "9 ó ò ô ö õ ø ō œ ő", "9"),
-            letter("p", "0", "0"),
-        ),
-        listOf(
-            spacer(0.5f),
-            letter("a", "á à â ä ã å ā æ ą"),
-            letter("s", "ß ś š ş"),
-            letter("d", "ð ď"),
-            letter("f"),
-            letter("g", "ğ"),
-            letter("h"),
-            letter("j"),
-            letter("k"),
-            letter("l", "ł ľ"),
-            spacer(0.5f),
-        ),
-        listOf(
-            shift,
-            letter("z", "ž ź ż"),
-            letter("x"),
-            letter("c", "ç ć č"),
-            letter("v"),
-            letter("b"),
-            letter("n", "ñ ń ň"),
-            letter("m"),
-            delete,
-        ),
-        bottomRow(toSymbols),
-    )
+            modeKey,
+            sym(comma, commaAlternates),
+            Key("", text = null, code = Codes.SPACE, width = total - 5f),
+            sym(".", periodAlternates),
+            Key("⏎", text = null, code = Codes.ENTER, width = 1.5f, style = KeyStyle.ACCENT),
+        )
 
-    val SYMBOLS: List<List<Key>> = listOf(
+    private fun modeKey(label: String, code: Int) =
+        Key(label, text = null, code = code, width = 1.5f, style = KeyStyle.FUNCTION)
+
+    // --- Letters ----------------------------------------------------------------------------
+
+    private fun letters(spec: LayoutSpec): List<List<Key>> {
+        val rows = spec.rows.map(::split)
+        val fnCount = if (spec.cased) 2 else 1
+        val third = rows[2]
+        val total = maxOf(rows[0].size, rows[1].size, third.size + fnCount, 10).toFloat()
+        val fnWidth = ((total - third.size) / fnCount).coerceIn(1f, 1.5f)
+
+        fun letter(c: String, digitIndex: Int? = null): Key {
+            val own = spec.alternates[c] ?: if (spec.latin) LanguageLayouts.LATIN_ALTERNATES[c] else null
+            val alternates = split(own.orEmpty())
+            if (digitIndex == null || digitIndex >= spec.digits.length) return Key(c, alternates = alternates)
+            val digit = spec.digits[digitIndex].toString()
+            val western = "1234567890"[digitIndex].toString()
+            val digits = if (digit == western) listOf(digit) else listOf(digit, western)
+            return Key(c, alternates = digits + alternates, hint = digit)
+        }
+
+        val row1 = rows[0].mapIndexed { i, c -> letter(c, i) }
+        val row2 = rows[1].map { letter(it) }
+        val row3 = buildList {
+            if (spec.cased) add(shift(fnWidth))
+            addAll(third.map { letter(it) })
+            add(delete(fnWidth))
+        }
+        val bottom = bottomRow(
+            total, modeKey("?123", Codes.MODE_SYMBOLS),
+            spec.comma, spec.commaAlternates, spec.periodAlternates,
+        )
+        return listOf(row1, row2, row3, bottom)
+    }
+
+    // --- Symbols ----------------------------------------------------------------------------
+
+    private fun symbols(spec: LayoutSpec): List<List<Key>> = listOf(
         listOf(
             sym("1", "¹ ½ ⅓ ¼"), sym("2", "² ⅔"), sym("3", "³ ¾"), sym("4"), sym("5"),
             sym("6"), sym("7"), sym("8"), sym("9"), sym("0", "°"),
@@ -109,15 +108,15 @@ object KeyboardLayouts {
             sym("-", "– — ·"), sym("+", "±"), sym("("), sym(")"), sym("/"),
         ),
         listOf(
-            Key("=\\<", text = null, code = Codes.MODE_SYMBOLS_2, width = 1.5f, style = KeyStyle.FUNCTION),
+            modeKey("=\\<", Codes.MODE_SYMBOLS_2),
             sym("*", "★ †"), sym("\"", "“ ” „ « »"), sym("'", "‘ ’ ‚ ‹ ›"), sym(":"), sym(";"),
-            sym("!", "¡"), sym("?", "¿"),
-            delete,
+            sym("!", "¡"), sym("?", "¿ ؟"),
+            delete(1.5f),
         ),
-        bottomRow(toLetters),
+        bottomRow(10f, modeKey(spec.lettersLabel, Codes.MODE_LETTERS), spec.comma, spec.commaAlternates, spec.periodAlternates),
     )
 
-    val SYMBOLS_2: List<List<Key>> = listOf(
+    private fun symbols2(spec: LayoutSpec): List<List<Key>> = listOf(
         listOf(
             sym("~"), sym("`"), sym("|"), sym("•"), sym("√"),
             sym("π"), sym("÷"), sym("×"), sym("¶"), sym("∆"),
@@ -127,16 +126,23 @@ object KeyboardLayouts {
             sym("°"), sym("="), sym("{"), sym("}"), sym("\\"),
         ),
         listOf(
-            Key("?123", text = null, code = Codes.MODE_SYMBOLS, width = 1.5f, style = KeyStyle.FUNCTION),
+            modeKey("?123", Codes.MODE_SYMBOLS),
             sym("%", "‰"), sym("©"), sym("®"), sym("™"), sym("✓"), sym("["), sym("]"),
-            delete,
+            delete(1.5f),
         ),
-        bottomRow(toLetters),
+        bottomRow(10f, modeKey(spec.lettersLabel, Codes.MODE_LETTERS), spec.comma, spec.commaAlternates, spec.periodAlternates),
     )
 
-    fun forMode(mode: KeyboardMode): List<List<Key>> = when (mode) {
-        KeyboardMode.LETTERS -> LETTERS
-        KeyboardMode.SYMBOLS -> SYMBOLS
-        KeyboardMode.SYMBOLS_2 -> SYMBOLS_2
-    }
+    // Built once per language and mode, so the keyboard view can tell when the layout really changed.
+    private val cache = HashMap<String, List<List<Key>>>()
+
+    fun forMode(mode: KeyboardMode, language: String): List<List<Key>> =
+        cache.getOrPut("$mode/$language") {
+            val spec = LanguageLayouts.forLanguage(language)
+            when (mode) {
+                KeyboardMode.LETTERS -> letters(spec)
+                KeyboardMode.SYMBOLS -> symbols(spec)
+                KeyboardMode.SYMBOLS_2 -> symbols2(spec)
+            }
+        }
 }

@@ -17,6 +17,9 @@
     <string name="label_typing_language">I type in (the language I\'m practising)</string>
     <string name="label_output_language">It gets sent in (my friends\' language)</string>
     <string name="swap_languages">Swap</string>
+    <string name="layout_note">Keyboard layout: %1$s</string>
+    <string name="layout_missing">There\'s no %1$s keyboard layout yet, so you\'ll get QWERTY.</string>
+    <string name="layout_note_off">When translation is off you type in %1$s, so the keys switch to its layout.</string>
     <string name="download_models">Download language packs</string>
     <string name="models_ready">Language packs ready ✓ — translation works offline.</string>
     <string name="models_missing">Language packs need downloading (about 30 MB each).</string>
@@ -26,7 +29,7 @@
 
     <string name="section_try">3. Try it</string>
     <string name="try_hint">Tap here and type with Language Keyboard</string>
-    <string name="how_to_use">Tips: the ✓ key (where Enter usually is) locks in the current translation. Tap ⇄ on the bar above the keys to turn translation off, for names or words that shouldn\'t change. Long-press a letter for accents, long-press the space bar to switch keyboards.</string>
+    <string name="how_to_use">Tips: the ✓ key (where Enter usually is) locks in the current translation. Tap the language chip (ES → EN) above the keys to turn translation off and type straight in your friends\' language; the keys switch to their layout. Long-press a letter for accents, long-press the space bar to switch keyboards.</string>
 
     <string name="strip_hint">Type in %1$s…</string>
     <string name="strip_passthrough">Translation off: typing goes straight in</string>

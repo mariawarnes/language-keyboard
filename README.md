@@ -29,7 +29,9 @@ text box receives the **translation into your friends' language**, updated live 
 - Sending the message from the app, or tapping somewhere else in the text, also locks the phrase in.
 - **✕** removes the current phrase from the text box.
 - Tap the **ES → EN** chip to turn translation off and type directly, e.g. for names. Tap it again to turn it back on.
-- Password, email, URL and number fields are never translated.
+- Password, email, URL and number fields are never translated (and use a plain QWERTY layout).
+- **The keys follow the language you're typing in.** With translation on, you get the layout of the language
+  you're practising; with it off, your friends' language's layout. See the list below.
 - Long-press letters for accents (á, ñ, ü, ß, …) and the top row for digits. Long-press the space bar to switch keyboards.
 
 ## Install
@@ -59,11 +61,26 @@ You need JDK 17 and the Android SDK (Android Studio installs both).
 
 Or open the folder in Android Studio and press Run.
 
+## Keyboard layouts
+
+| Layout | Languages |
+| --- | --- |
+| QWERTY + ñ / ç | Spanish, Galician / Catalan |
+| QWERTY (accents on long-press) | English, Portuguese, Italian, Dutch, Polish, Romanian, Lithuanian, Latvian, Vietnamese, Indonesian, Malay, Swahili, Tagalog, Afrikaans, Irish, Welsh, Haitian Creole, Esperanto, Maltese |
+| QWERTY + å ö ä / æ ø / ð æ þ / ü õ ö ä | Swedish, Finnish / Danish, Norwegian / Icelandic / Estonian |
+| QWERTZ (+ ü ö ä, ú ů, ç ë) | German, Czech, Albanian, Slovak, Hungarian, Croatian, Slovenian |
+| AZERTY | French |
+| Turkish Q | Turkish |
+| ЙЦУКЕН / phonetic | Russian, Ukrainian, Belarusian / Bulgarian, Macedonian |
+| Greek | Greek |
+| Hebrew, Arabic, Persian, Urdu (phonetic) | Hebrew, Arabic, Persian, Urdu |
+| Georgian | Georgian |
+
 ## Limitations (for now)
 
-- The keyboard layout is Latin QWERTY with accents, so it works best when the language you type in is written in
-  the Latin alphabet (Spanish, French, German, Italian, Portuguese, Dutch, Polish, Turkish, Vietnamese, …).
-  The language it's *sent in* can be anything ML Kit supports.
+- No layout yet for Japanese, Chinese, Korean, Thai or the Indian languages (Hindi, Bengali, Tamil, …). These
+  need more than one key per character (kana/kanji conversion, Hangul syllable building, conjuncts), so they fall
+  back to QWERTY for now. They still work as the language it's *sent in*.
 - ML Kit's translations are decent but not perfect, and the translation of half a sentence can look odd until you
   finish it.
 - No word suggestions or autocorrect yet.

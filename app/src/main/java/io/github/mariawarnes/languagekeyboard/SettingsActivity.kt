@@ -4,13 +4,17 @@ import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.Spinner
 import android.widget.TextView
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.common.model.RemoteModelManager
 import com.google.mlkit.nl.translate.TranslateLanguage
@@ -24,22 +28,28 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var typingSpinner: Spinner
     private lateinit var outputSpinner: Spinner
     private lateinit var modelStatus: TextView
+    private lateinit var layoutNote: TextView
+    private lateinit var enableButton: Button
     private lateinit var downloadButton: Button
 
     private val languages = Languages.all
     private var downloading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
+        applyEdgeToEdgeInsets(findViewById(R.id.scroll))
 
         keyboardStatus = findViewById(R.id.keyboard_status)
         typingSpinner = findViewById(R.id.typing_language)
         outputSpinner = findViewById(R.id.output_language)
         modelStatus = findViewById(R.id.model_status)
+        layoutNote = findViewById(R.id.layout_note)
+        enableButton = findViewById(R.id.enable_button)
         downloadButton = findViewById(R.id.download_button)
 
-        findViewById<Button>(R.id.enable_button).setOnClickListener {
+        enableButton.setOnClickListener {
             startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
         }
         findViewById<Button>(R.id.choose_button).setOnClickListener {
@@ -102,6 +112,7 @@ class SettingsActivity : AppCompatActivity() {
         val enabled = inputMethodManager().enabledInputMethodList.any { it.packageName == packageName }
         val current = Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD) ?: ""
         val selected = current.startsWith("$packageName/")
+        enableButton.visibility = if (enabled) View.GONE else View.VISIBLE
         keyboardStatus.setText(
             when {
                 selected -> R.string.status_selected
@@ -111,10 +122,45 @@ class SettingsActivity : AppCompatActivity() {
         )
     }
 
+    /**
+     * Android 15+ draws apps edge-to-edge. Keep the content clear of the status bar, and shrink
+     * the scroll area above the keyboard so the focused "try it" box scrolls into view.
+     */
+    private fun applyEdgeToEdgeInsets(scroll: View) {
+        ViewCompat.setOnApplyWindowInsetsListener(scroll) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            v.setPadding(bars.left, bars.top, bars.right, 0)
+            (v.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp ->
+                val bottom = maxOf(bars.bottom, ime.bottom)
+                if (lp.bottomMargin != bottom) {
+                    lp.bottomMargin = bottom
+                    v.layoutParams = lp
+                }
+            }
+            WindowInsetsCompat.CONSUMED
+        }
+    }
+
+    private fun refreshLayoutNote(typing: String, output: String) {
+        val typingLayout = LanguageLayouts.forLanguage(typing)
+        val outputLayout = LanguageLayouts.forLanguage(output)
+        val lines = mutableListOf(
+            if (typingLayout.dedicated) getString(R.string.layout_note, typingLayout.name)
+            else getString(R.string.layout_missing, Languages.displayName(typing))
+        )
+        if (outputLayout.name != typingLayout.name) {
+            lines += getString(R.string.layout_note_off, Languages.displayName(output))
+            if (!outputLayout.dedicated) lines += getString(R.string.layout_missing, Languages.displayName(output))
+        }
+        layoutNote.text = lines.joinToString("\n")
+    }
+
     private fun refreshModelStatus() {
-        if (downloading) return
         val typing = selectedTyping()
         val output = selectedOutput()
+        refreshLayoutNote(typing, output)
+        if (downloading) return
         if (typing == output) {
             modelStatus.setText(R.string.same_language)
             downloadButton.isEnabled = false

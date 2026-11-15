@@ -14,6 +14,9 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import java.util.Locale
 
 /**
  * The keyboard.
@@ -82,6 +85,17 @@ class LanguageKeyboardService : InputMethodService(),
         get() = translateEnabled && fieldAllowsTranslation &&
             Prefs.typingLanguage(this) != Prefs.outputLanguage(this)
 
+    /**
+     * Whose keyboard layout to show: the language you're practising while translating, your
+     * friends' language when translation is off, and plain QWERTY for emails, URLs and passwords.
+     */
+    private val layoutLanguage: String
+        get() = when {
+            !fieldAllowsTranslation -> "en"
+            translationActive -> Prefs.typingLanguage(this)
+            else -> Prefs.outputLanguage(this)
+        }
+
     // --- Lifecycle --------------------------------------------------------------------------
 
     override fun onCreate() {
@@ -108,6 +122,16 @@ class LanguageKeyboardService : InputMethodService(),
         translatingIndicator = root.findViewById(R.id.translating_indicator)
         root.findViewById<View>(R.id.clear_button).setOnClickListener { clearPhrase() }
         root.findViewById<View>(R.id.settings_button).setOnClickListener { openSettings() }
+
+        // Android 15+ draws keyboards edge-to-edge: keep the keys clear of the gesture bar /
+        // navigation buttons (the keyboard's background still fills the space behind them).
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.displayCutout())
+            v.setPadding(bars.left, 0, bars.right, bars.bottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(root)
+
         refreshUi()
         return root
     }
@@ -240,12 +264,17 @@ class LanguageKeyboardService : InputMethodService(),
 
     private fun setMode(newMode: KeyboardMode) {
         mode = newMode
-        keyboardView?.rows = KeyboardLayouts.forMode(mode)
+        keyboardView?.rows = KeyboardLayouts.forMode(mode, layoutLanguage)
     }
 
     /** Capitalise the first letter of a sentence when the app asks for it. */
     private fun updateAutoShift() {
         if (shiftState == ShiftState.LOCKED) {
+            keyboardView?.shiftState = shiftState
+            return
+        }
+        if (!LanguageLayouts.forLanguage(layoutLanguage).cased) {
+            shiftState = ShiftState.OFF
             keyboardView?.shiftState = shiftState
             return
         }
@@ -391,6 +420,8 @@ class LanguageKeyboardService : InputMethodService(),
         lockInPhrase()
         translateEnabled = !translateEnabled
         Prefs.setTranslateEnabled(this, translateEnabled)
+        if (shiftState == ShiftState.LOCKED) shiftState = ShiftState.OFF
+        updateAutoShift()
         refreshUi()
     }
 
@@ -442,11 +473,13 @@ class LanguageKeyboardService : InputMethodService(),
         val active = translationActive
 
         keyboardView?.let { kv ->
-            kv.rows = KeyboardLayouts.forMode(mode)
+            val language = layoutLanguage
+            kv.rows = KeyboardLayouts.forMode(mode, language)
+            kv.caseLocale = Locale.forLanguageTag(language)
             kv.shiftState = shiftState
             kv.enterLabel = if (active && buffer.isNotEmpty()) "✓" else enterLabelFor(currentInputEditorInfo)
             kv.spaceLabel = if (active) "${Languages.displayName(typing)} → ${Languages.displayName(output)}"
-            else Languages.displayName(typing)
+            else Languages.displayName(language)
         }
 
         languageChip?.let { chip ->
