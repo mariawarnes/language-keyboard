@@ -80,6 +80,7 @@ class LensSettingsActivity : AppCompatActivity() {
         bindSwitch(R.id.whatsapp, LensPrefs.KEY_WHATSAPP, true)
         bindSwitch(R.id.messenger, LensPrefs.KEY_MESSENGER, true)
         bindSwitch(R.id.paused, LensPrefs.KEY_PAUSED, false)
+        bindSwitch(R.id.shorthand, LensPrefs.KEY_SHORTHAND, true)
         packStatus.setText(R.string.packs_missing)
     }
 

@@ -45,10 +45,11 @@ class LensService : AccessibilityService(), SharedPreferences.OnSharedPreference
 
     private fun configure() {
         translator.configure(LensPrefs.native(this), LensPrefs.learning(this))
+        translator.shorthand = LensPrefs.shorthand(this)
     }
 
     override fun onSharedPreferenceChanged(prefs: SharedPreferences, key: String?) {
-        if (key == LensPrefs.KEY_LEARNING || key == LensPrefs.KEY_NATIVE) configure()
+        if (key == LensPrefs.KEY_LEARNING || key == LensPrefs.KEY_NATIVE || key == LensPrefs.KEY_SHORTHAND) configure()
         overlay.clear()
         schedule(0)
     }

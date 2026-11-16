@@ -23,6 +23,16 @@ class LensTranslator(private val onUpdated: () -> Unit) {
     private var learning = ""
     private var ready = false
 
+    /** Put abbreviations back in the learning language's own shorthand ("por favor" → "porfa"). */
+    var shorthand = true
+        set(value) {
+            if (field != value) {
+                field = value
+                cache.evictAll() // redo translations with or without shorthand
+                pending.clear()
+            }
+        }
+
     /** original → translation, or SKIP when it isn't in your language. */
     private val cache = LruCache<String, String>(600)
     private val pending = HashSet<String>()
@@ -82,7 +92,7 @@ class LensTranslator(private val onUpdated: () -> Unit) {
                     .addOnSuccessListener { translated ->
                         pending -= text
                         if (translator !== client) return@addOnSuccessListener
-                        val result = Slang.shorten(translated, expanded.concepts, learning)
+                        val result = if (shorthand) Slang.shorten(translated, expanded.concepts, learning) else translated
                         cache.put(text, if (same(translated, expanded.text) || same(result, text)) SKIP else result)
                         onUpdated()
                     }

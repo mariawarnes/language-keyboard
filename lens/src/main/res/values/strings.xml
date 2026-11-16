@@ -16,14 +16,18 @@
     <string name="packs_downloading">Downloading…</string>
     <string name="packs_failed">Download failed: %1$s</string>
 
-    <string name="section_turn_on">2. Turn on Language Lens</string>
+    <string name="section_style">2. Translations</string>
+    <string name="shorthand">Use chat abbreviations</string>
+    <string name="shorthand_summary">When a message uses shorthand like \"pls\" or \"idk\", show the usual shorthand in the language you\'re learning (\"porfa\", \"nse\"). Off: the full words (\"por favor\", \"no sé\"). Abbreviations are understood either way.</string>
+
+    <string name="section_turn_on">3. Turn on Language Lens</string>
     <string name="status_on">On ✓</string>
     <string name="status_off">Off — turn it on in Accessibility settings.</string>
     <string name="open_accessibility">Open Accessibility settings</string>
     <string name="restricted_help">If Android says the setting is restricted (apps installed outside the Play Store), open App info, tap ⋮ (top right) → Allow restricted settings, then try again.</string>
     <string name="open_app_info">Open App info</string>
 
-    <string name="section_apps">3. Where to use it</string>
+    <string name="section_apps">4. Where to use it</string>
     <string name="app_whatsapp">WhatsApp</string>
     <string name="app_messenger">Messenger</string>
     <string name="paused">Pause Language Lens</string>

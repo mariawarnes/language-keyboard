@@ -63,6 +63,22 @@
             android:layout_height="wrap_content"
             android:text="@string/download_packs" />
 
+        <TextView style="@style/LensSection" android:text="@string/section_style" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/shorthand"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/shorthand"
+            android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/shorthand_summary"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
+
         <TextView style="@style/LensSection" android:text="@string/section_turn_on" />
 
         <TextView

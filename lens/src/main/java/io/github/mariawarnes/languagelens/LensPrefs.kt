@@ -10,6 +10,7 @@ object LensPrefs {
     const val KEY_PAUSED = "paused"
     const val KEY_WHATSAPP = "app_whatsapp"
     const val KEY_MESSENGER = "app_messenger"
+    const val KEY_SHORTHAND = "shorthand"
 
     val WHATSAPP = setOf("com.whatsapp", "com.whatsapp.w4b")
     val MESSENGER = setOf("com.facebook.orca", "com.facebook.mlite")
@@ -19,6 +20,9 @@ object LensPrefs {
     fun learning(context: Context) = get(context).getString(KEY_LEARNING, null) ?: "es"
     fun native(context: Context) = get(context).getString(KEY_NATIVE, null) ?: "en"
     fun paused(context: Context) = get(context).getBoolean(KEY_PAUSED, false)
+
+    /** Use the learning language's chat abbreviations ("porfa") where the message abbreviated. */
+    fun shorthand(context: Context) = get(context).getBoolean(KEY_SHORTHAND, true)
 
     fun setPaused(context: Context, paused: Boolean) = get(context).edit().putBoolean(KEY_PAUSED, paused).apply()
 
