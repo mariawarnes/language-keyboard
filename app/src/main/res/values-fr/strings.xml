@@ -47,7 +47,7 @@
 
     <string name="section_checking">5. Vérifier mon %1$s</string>
     <string name="mark_mistakes">Signaler les fautes</string>
-    <string name="mark_mistakes_summary">Souligne d\'une vague rouge les mots mal orthographiés et les accents manquants dans la barre de pratique. Touchez le mot pour voir la correction. Fonctionne hors ligne.</string>
+    <string name="mark_mistakes_summary">Souligne d\'une vague rouge les mots mal orthographiés et les accents manquants dans la barre de pratique. Touchez le mot pour voir la correction. Repère aussi certaines erreurs de genre comme « este es una » en espagnol, portugais et italien (vague bleue). Fonctionne hors ligne.</string>
     <string name="grammar_check">Vérification grammaticale (en ligne)</string>
     <string name="grammar_check_summary">Vérifie aussi la grammaire, comme l\'accord en genre et les formes verbales (vague bleue), et explique chaque faute. Envoie le texte de la barre de pratique à LanguageTool (languagetool.org) quand vous faites une pause. Gratuit, sans compte. Seul votre texte de pratique est envoyé, pas la traduction.</string>
     <string name="grammar_unsupported">La vérification grammaticale n\'est pas disponible pour : %1$s.</string>

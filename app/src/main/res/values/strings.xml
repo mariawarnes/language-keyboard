@@ -49,7 +49,7 @@
 
     <string name="section_checking">5. Checking my %1$s</string>
     <string name="mark_mistakes">Mark mistakes</string>
-    <string name="mark_mistakes_summary">Puts a red squiggly line under misspelt words and missing accents in the practice bar. Tap the word to see the fix. Works offline.</string>
+    <string name="mark_mistakes_summary">Puts a red squiggly line under misspelt words and missing accents in the practice bar. Tap the word to see the fix. Also catches some gender mistakes like “este es una” in Spanish, Portuguese and Italian (blue line). Works offline.</string>
     <string name="grammar_check">Grammar check (online)</string>
     <string name="grammar_check_summary">Also checks grammar, like gender agreement and verb forms (blue squiggly line), and explains each mistake. Sends the text in the practice bar to LanguageTool (languagetool.org) when you pause typing. Free, no account. Only your practice text is sent, not the translation.</string>
     <string name="grammar_unsupported">Grammar check isn\'t available for %1$s.</string>

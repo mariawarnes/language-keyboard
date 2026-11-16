@@ -47,7 +47,7 @@
 
     <string name="section_checking">5. Mein %1$s prüfen</string>
     <string name="mark_mistakes">Fehler markieren</string>
-    <string name="mark_mistakes_summary">Unterstreicht falsch geschriebene Wörter und fehlende Akzente in der Übungsleiste mit einer roten Wellenlinie. Tippe auf das Wort, um die Korrektur zu sehen. Funktioniert offline.</string>
+    <string name="mark_mistakes_summary">Unterstreicht falsch geschriebene Wörter und fehlende Akzente in der Übungsleiste mit einer roten Wellenlinie. Tippe auf das Wort, um die Korrektur zu sehen. Findet auch einige Genusfehler wie „este es una“ im Spanischen, Portugiesischen und Italienischen (blaue Linie). Funktioniert offline.</string>
     <string name="grammar_check">Grammatikprüfung (online)</string>
     <string name="grammar_check_summary">Prüft auch die Grammatik, etwa Genus-Übereinstimmung und Verbformen (blaue Wellenlinie), und erklärt jeden Fehler. Sendet den Text der Übungsleiste an LanguageTool (languagetool.org), wenn du eine Pause machst. Kostenlos, ohne Konto. Gesendet wird nur dein Übungstext, nicht die Übersetzung.</string>
     <string name="grammar_unsupported">Die Grammatikprüfung ist für %1$s nicht verfügbar.</string>

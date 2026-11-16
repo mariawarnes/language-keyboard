@@ -47,7 +47,7 @@
 
     <string name="section_checking">5. Controlla il mio %1$s</string>
     <string name="mark_mistakes">Segnala gli errori</string>
-    <string name="mark_mistakes_summary">Sottolinea con una linea ondulata rossa le parole scritte male e gli accenti mancanti nella barra di pratica. Tocca la parola per vedere la correzione. Funziona offline.</string>
+    <string name="mark_mistakes_summary">Sottolinea con una linea ondulata rossa le parole scritte male e gli accenti mancanti nella barra di pratica. Tocca la parola per vedere la correzione. Trova anche alcuni errori di genere come «este es una» in spagnolo, portoghese e italiano (linea blu). Funziona offline.</string>
     <string name="grammar_check">Controllo grammaticale (online)</string>
     <string name="grammar_check_summary">Controlla anche la grammatica, come la concordanza di genere e le forme verbali (linea ondulata blu), e spiega ogni errore. Invia il testo della barra di pratica a LanguageTool (languagetool.org) quando fai una pausa. Gratuito, senza account. Viene inviato solo il tuo testo di pratica, non la traduzione.</string>
     <string name="grammar_unsupported">Il controllo grammaticale non è disponibile per %1$s.</string>

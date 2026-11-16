@@ -1076,12 +1076,24 @@ class LanguageKeyboardService : InputMethodService(),
         val text = buffer.toString()
         fun valid(m: Mark) = m.start >= 0 && m.end <= text.length && text.substring(m.start, m.end) == m.original
         val words = if (markMistakes) wordMarks.filter { valid(it) } else emptyList()
-        val grammar = if (grammarCheck) {
-            grammarMarks.filter { g -> valid(g) && words.none { w -> w.start < g.end && g.start < w.end } }
+        fun free(g: Mark, others: List<Mark>) = others.none { w -> w.start < g.end && g.start < w.end }
+        // Offline agreement check ("este es una…"): real words, so the word check can't see it.
+        val language = Prefs.typingLanguage(this)
+        val agreement = if (markMistakes && Agreement.isSupported(language)) {
+            Agreement.check(text, language)
+                .filter { cursor != it.checkedUpTo } // that article may still be being typed
+                .map { Mark(it.start, it.end, it.word, MarkKind.GRAMMAR, it.message, listOf(it.fix)) }
+                .filter { free(it, words) }
         } else {
             emptyList()
         }
-        return (words + grammar).sortedBy { it.start }
+        if (agreement.isNotEmpty()) translateExplanations(agreement)
+        val grammar = if (grammarCheck) {
+            grammarMarks.filter { g -> valid(g) && free(g, words) && free(g, agreement) }
+        } else {
+            emptyList()
+        }
+        return (words + agreement + grammar).sortedBy { it.start }
     }
 
     /** After an edit: re-check words now, and grammar once typing pauses. */

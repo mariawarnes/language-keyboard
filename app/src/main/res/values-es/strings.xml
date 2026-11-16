@@ -47,7 +47,7 @@
 
     <string name="section_checking">5. Revisar mi %1$s</string>
     <string name="mark_mistakes">Marcar errores</string>
-    <string name="mark_mistakes_summary">Subraya con una línea ondulada roja las palabras mal escritas y los acentos que faltan en la barra de práctica. Toca la palabra para ver la corrección. Funciona sin conexión.</string>
+    <string name="mark_mistakes_summary">Subraya con una línea ondulada roja las palabras mal escritas y los acentos que faltan en la barra de práctica. Toca la palabra para ver la corrección. También detecta algunos errores de género como «este es una» en español, portugués e italiano (línea azul). Funciona sin conexión.</string>
     <string name="grammar_check">Revisión gramatical (en línea)</string>
     <string name="grammar_check_summary">También revisa la gramática, como la concordancia de género y las formas verbales (línea ondulada azul), y explica cada error. Envía el texto de la barra de práctica a LanguageTool (languagetool.org) cuando dejas de escribir. Gratis y sin cuenta. Solo se envía tu texto de práctica, no la traducción.</string>
     <string name="grammar_unsupported">La revisión gramatical no está disponible para %1$s.</string>
