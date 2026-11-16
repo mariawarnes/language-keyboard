@@ -286,11 +286,23 @@ class LanguageKeyboardService : InputMethodService(),
         // navigation buttons (the keyboard's background still fills the space behind them).
         ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.displayCutout())
-            // With gesture navigation the reported bar is short (~24dp), but the keyboard's own
-            // ⌄ / 🌐 buttons sit there too, so leave at least 48dp for them.
-            val minimum = (48 * resources.displayMetrics.density).toInt()
-            val bottom = if (bars.bottom > 0) maxOf(bars.bottom, minimum) else 0
-            v.setPadding(bars.left, 0, bars.right, bottom)
+            val tappable = insets.getInsets(WindowInsetsCompat.Type.tappableElement())
+            // Android 15+ draws keyboards behind the navigation strip (older versions place the
+            // keyboard above it themselves, and report 0 here). 3-button navigation reports its
+            // real 48dp height; gesture navigation reports only the handle (~24dp) but still shows
+            // the keyboard's ⌄ / 🌐 buttons in a 48dp row, so reserve at least 48dp.
+            var bottom = maxOf(bars.bottom, tappable.bottom)
+            if (bottom > 0) bottom = maxOf(bottom, (48 * resources.displayMetrics.density).toInt())
+            val kv = keyboardView
+            if (bottom > 0 && kv != null) {
+                // The system centres its buttons in that strip, so end the keys right where it
+                // starts: the space above the buttons then matches the space below them.
+                kv.padBottom = 0f
+                v.setPadding(bars.left, 0, bars.right, (bottom - kv.faceInset).toInt().coerceAtLeast(0))
+            } else {
+                kv?.padBottom = 8 * resources.displayMetrics.density
+                v.setPadding(bars.left, 0, bars.right, bottom)
+            }
             insets
         }
         ViewCompat.requestApplyInsets(root)

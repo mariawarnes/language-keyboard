@@ -96,7 +96,20 @@ class KeyboardView @JvmOverloads constructor(
 
     private val rowHeight = dp(54f)
     private val padTop = dp(4f)
-    private val padBottom = dp(8f)
+    /**
+     * Space under the bottom row of keys. Normally 8dp; 0 when the keyboard sits above the system's
+     * navigation strip, so the keys end exactly where that strip begins.
+     */
+    var padBottom = dp(8f)
+        set(value) {
+            if (field != value) {
+                field = value
+                requestLayout()
+            }
+        }
+
+    /** How far a key's face sits inside its cell (half the gap between keys). */
+    val faceInset: Float get() = gapY / 2
     private val padSide = dp(3f)
     private val gapX = dp(3f)
     private val gapY = dp(5f)
