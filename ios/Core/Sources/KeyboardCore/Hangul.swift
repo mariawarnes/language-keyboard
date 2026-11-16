@@ -82,7 +82,7 @@ public enum Hangul {
             let pair = split(jong[f], finalPairs).map { Array($0) }
             return syllable(ci, v, pair.flatMap { jong.firstIndex(of: $0[0]) } ?? 0)
         }
-        if let pair = split(jung[v], vowelPairs).map { Array($0) }, let vi = jung.firstIndex(of: pair[0]) {
+        if let pair = split(jung[v], vowelPairs).map({ Array($0) }), let vi = jung.firstIndex(of: pair[0]) {
             return syllable(ci, vi, 0)
         }
         return String(cho[ci])
