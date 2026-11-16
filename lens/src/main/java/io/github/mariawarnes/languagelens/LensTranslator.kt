@@ -74,12 +74,16 @@ class LensTranslator(private val onUpdated: () -> Unit) {
                     return@addOnSuccessListener
                 }
                 // In your language, or too short to tell ("Super busy"): translate, and if nothing
-                // changes it was already in the language you're learning.
-                client.translate(text)
+                // changes it was already in the language you're learning. Chat abbreviations are
+                // spelt out first ("pls" → "please") and put back in the other language's own
+                // shorthand after ("por favor" → "porfa"), so the tone stays the same.
+                val expanded = Slang.expand(text, native)
+                client.translate(expanded.text)
                     .addOnSuccessListener { translated ->
                         pending -= text
                         if (translator !== client) return@addOnSuccessListener
-                        cache.put(text, if (same(translated, text)) SKIP else translated)
+                        val result = Slang.shorten(translated, expanded.concepts, learning)
+                        cache.put(text, if (same(translated, expanded.text) || same(result, text)) SKIP else result)
                         onUpdated()
                     }
                     .addOnFailureListener { pending -= text }
