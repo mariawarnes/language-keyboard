@@ -96,6 +96,15 @@ When you enable any third-party keyboard, Android warns that it could collect wh
 analytics; it only uses the internet to download language packs and word lists, and (only if you turn it on) for
 the online grammar check.
 
+## iPhone version (in progress)
+
+`ios/` has an iOS version of the keyboard (the Lens can't exist on iOS: apps there can't read or draw over other apps).
+
+- Same idea: practice mode (type in the language you're learning; the translation goes into the message as you type, ✓ keeps it) and direct mode (type in your own language with a preview in the one you're learning), the ES | EN switch, ✕ and ⚙ in the bar, per-language layouts, Hangul, space-bar cursor and long-press accents.
+- Translation uses Apple's on-device Translation (iOS 26+). iOS only lets apps download language packs, so you download each pair in the Language Keyboard app first. The keyboard doesn't need "Full Access".
+- Not there yet: suggestions, gesture typing, mistake marking, and kana/pinyin conversion (Japanese and Chinese currently use a QWERTY layout with the system's other keyboards still available via 🌐).
+- **Installing:** GitHub builds it on every change and publishes an *unsigned* `language-keyboard-unsigned.ipa` to the [`ios-latest` release](../../releases/tag/ios-latest). An iPhone only installs apps signed with an Apple account, so for now it can't be installed directly. A free Apple ID can sideload it onto your own phone (re-sign it with a tool such as Sideloadly or AltStore; it expires after 7 days). Giving it to other people needs a paid Apple Developer account ($99/year), through TestFlight or the App Store.
+
 ## Build it yourself
 
 You need JDK 17 and the Android SDK (Android Studio installs both).

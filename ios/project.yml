@@ -1,0 +1,55 @@
+name: LanguageKeyboard
+options:
+  bundleIdPrefix: io.github.mariawarnes
+  deploymentTarget:
+    iOS: "26.0"
+packages:
+  KeyboardCore:
+    path: Core
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+targets:
+  LanguageKeyboard:
+    type: application
+    platform: iOS
+    sources: [App]
+    dependencies:
+      - target: KeyboardExtension
+      - package: KeyboardCore
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Language Keyboard
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.mariawarnes.languagekeyboard
+        TARGETED_DEVICE_FAMILY: "1,2"
+  KeyboardExtension:
+    type: app-extension
+    platform: iOS
+    sources: [Keyboard]
+    dependencies:
+      - package: KeyboardCore
+    info:
+      path: Keyboard/Info.plist
+      properties:
+        CFBundleDisplayName: Language Keyboard
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.keyboard-service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController
+          NSExtensionAttributes:
+            IsASCIICapable: false
+            PrefersRightToLeft: false
+            PrimaryLanguage: mul
+            RequestsOpenAccess: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.mariawarnes.languagekeyboard.keyboard
+        PRODUCT_NAME: KeyboardExtension
+        TARGETED_DEVICE_FAMILY: "1,2"
