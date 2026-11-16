@@ -1070,6 +1070,16 @@ class LanguageKeyboardService : InputMethodService(),
         },
     )
 
+    /** "Use “esta”, not “este”: “prueba” is feminine (you can tell from “una”…)", in your language. */
+    private fun agreementExplanation(hit: Agreement.Hit): String {
+        val gender = ui.getString(if (hit.feminine) R.string.gender_feminine else R.string.gender_masculine)
+        return if (hit.noun != null) {
+            ui.getString(R.string.agreement_noun, hit.word, hit.fix, hit.noun, gender, hit.article, hit.pair)
+        } else {
+            ui.getString(R.string.agreement_article, hit.word, hit.fix, hit.article, gender, hit.pair)
+        }
+    }
+
     /** Marks that still match the text (edits elsewhere may have moved or removed them). */
     private fun visibleMarks(): List<Mark> {
         if (!translationActive || buffer.isEmpty()) return emptyList()
@@ -1082,12 +1092,11 @@ class LanguageKeyboardService : InputMethodService(),
         val agreement = if (markMistakes && Agreement.isSupported(language)) {
             Agreement.check(text, language)
                 .filter { cursor != it.checkedUpTo } // that article may still be being typed
-                .map { Mark(it.start, it.end, it.word, MarkKind.GRAMMAR, it.message, listOf(it.fix)) }
+                .map { Mark(it.start, it.end, it.word, MarkKind.GRAMMAR, agreementExplanation(it), listOf(it.fix)) }
                 .filter { free(it, words) }
         } else {
             emptyList()
         }
-        if (agreement.isNotEmpty()) translateExplanations(agreement)
         val grammar = if (grammarCheck) {
             grammarMarks.filter { g -> valid(g) && free(g, words) && free(g, agreement) }
         } else {

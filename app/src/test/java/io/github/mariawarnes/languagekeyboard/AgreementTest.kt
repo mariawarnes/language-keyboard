@@ -38,11 +38,31 @@ class AgreementTest {
     }
 
     @Test
-    fun explainsWithTheCorrectPhrase() {
+    fun findsWhatGivesTheGenderAway() {
         val hit = Agreement.check("Hola este es una prueba", "es").single()
         assertEquals(5, hit.start)
         assertEquals(9, hit.end)
-        assertTrue(hit.message, hit.message.contains("«esta es una prueba»"))
+        assertEquals("una", hit.article)
+        assertEquals("prueba", hit.noun)
+        assertEquals("este/esta", hit.pair)
+        assertTrue(hit.feminine)
+        // An adjective before the noun is skipped.
+        assertEquals("idea", Agreement.check("ese fue una buena idea", "es").single().noun)
+        // Not typed yet.
+        assertEquals(null, Agreement.check("este es una", "es").single().noun)
+        // Masculine, and Italian elision.
+        val masc = Agreement.check("Esta es un problema", "es").single()
+        assertEquals("problema", masc.noun)
+        assertTrue(!masc.feminine)
+        val it = Agreement.check("questo è un'amica", "it").single()
+        assertEquals("un'", it.article)
+        assertEquals("amica", it.noun)
+    }
+
+    @Test
+    fun nounIsNotConsumed() {
+        // The look-ahead for the noun mustn't swallow the next sentence's demonstrative.
+        assertEquals(2, Agreement.check("esta es un libro este es una casa", "es").size)
     }
 
     @Test

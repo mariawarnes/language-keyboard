@@ -71,4 +71,8 @@
     <string name="mark_accent">\"%1$s\" a besoin d\'un accent : %2$s</string>
     <string name="marks_before_send">Des fautes possibles sont signalées. Corrigez-les, ou appuyez de nouveau sur ✓ pour garder le texte tel quel.</string>
     <string name="mark_no_fix">Aucune suggestion. Touchez ✕ pour laisser tel quel.</string>
+    <string name="agreement_noun">Utilisez « %2$s », pas « %1$s » : « %3$s » est %4$s (ça se voit au « %5$s » devant), et %6$s doit s’accorder avec le nom auquel il renvoie.</string>
+    <string name="agreement_article">Utilisez « %2$s », pas « %1$s » : « %3$s » montre que le nom qui suit est %4$s, et %5$s doit s’accorder avec le nom auquel il renvoie.</string>
+    <string name="gender_feminine">féminin</string>
+    <string name="gender_masculine">masculin</string>
 </resources>

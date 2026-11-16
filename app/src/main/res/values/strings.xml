@@ -73,4 +73,8 @@
     <string name="mark_accent">\"%1$s\" needs an accent: %2$s</string>
     <string name="marks_before_send">Possible mistakes are marked. Fix them, or press ✓ again to use it as it is.</string>
     <string name="mark_no_fix">No suggestion. Tap ✕ to leave it.</string>
+    <string name="agreement_noun">Use “%2$s”, not “%1$s”: “%3$s” is %4$s (you can tell from “%5$s” in front of it), and %6$s has to match the noun it’s about.</string>
+    <string name="agreement_article">Use “%2$s”, not “%1$s”: “%3$s” shows the noun after it is %4$s, and %5$s has to match the noun it’s about.</string>
+    <string name="gender_feminine">feminine</string>
+    <string name="gender_masculine">masculine</string>
 </resources>

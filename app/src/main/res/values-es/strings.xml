@@ -71,4 +71,8 @@
     <string name="mark_accent">\"%1$s\" necesita tilde: %2$s</string>
     <string name="marks_before_send">Hay posibles errores marcados. Corrígelos o vuelve a pulsar ✓ para usarlo tal cual.</string>
     <string name="mark_no_fix">No hay sugerencias. Toca ✕ para dejarlo así.</string>
+    <string name="agreement_noun">Usa «%2$s», no «%1$s»: «%3$s» es de género %4$s (se nota por el «%5$s» de delante), y %6$s tiene que concordar con el sustantivo al que se refiere.</string>
+    <string name="agreement_article">Usa «%2$s», no «%1$s»: «%3$s» indica que el sustantivo que sigue es %4$s, y %5$s tiene que concordar con el sustantivo al que se refiere.</string>
+    <string name="gender_feminine">femenino</string>
+    <string name="gender_masculine">masculino</string>
 </resources>
