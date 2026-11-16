@@ -19,6 +19,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.LayoutInflater
 import android.view.View
+import android.content.res.Configuration
 import android.view.ContextThemeWrapper
 import android.view.inputmethod.EditorInfo
 import android.widget.HorizontalScrollView
@@ -254,8 +255,16 @@ class LanguageKeyboardService : InputMethodService(),
         super.onDestroy()
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        // Dark mode switched on/off (or another system change): pick up the new colours.
+        ui = AppLocale.wrap(this)
+        super.onConfigurationChanged(newConfig)
+    }
+
     override fun onCreateInputView(): View {
-        // Inflated with the app-language resources (and the system keyboard theme).
+        // Inflated with the app-language resources (and the system keyboard theme). Re-made each
+        // time so it follows the phone's current light/dark setting.
+        ui = AppLocale.wrap(this)
         val inflater = LayoutInflater.from(ContextThemeWrapper(ui, android.R.style.Theme_DeviceDefault_InputMethod))
         val root = inflater.inflate(R.layout.input_view, null)
         keyboardView = root.findViewById<KeyboardView>(R.id.keyboard).also { it.listener = this }
@@ -891,7 +900,7 @@ class LanguageKeyboardService : InputMethodService(),
             val density = resources.displayMetrics.density
             toggle.background = GradientDrawable().apply {
                 cornerRadius = 15 * density
-                setColor(ContextCompat.getColor(this@LanguageKeyboardService, R.color.kb_key_function))
+                setColor(ContextCompat.getColor(ui, R.color.kb_key_function))
             }
             toggle.alpha = if (fieldBlocked) 0.5f else 1f
             toggle.contentDescription = getString(
@@ -906,10 +915,10 @@ class LanguageKeyboardService : InputMethodService(),
                 segment.text = Languages.shortLabel(code)
                 segment.background = if (selected) GradientDrawable().apply {
                     cornerRadius = 13 * density
-                    setColor(ContextCompat.getColor(this@LanguageKeyboardService, R.color.kb_key_accent))
+                    setColor(ContextCompat.getColor(ui, R.color.kb_key_accent))
                 } else null
                 segment.setTextColor(
-                    ContextCompat.getColor(this, if (selected) R.color.kb_key_text_on_accent else R.color.strip_text_secondary),
+                    ContextCompat.getColor(ui, if (selected) R.color.kb_key_text_on_accent else R.color.strip_text_secondary),
                 )
                 segment.isEnabled = !fieldBlocked
             }
@@ -921,8 +930,8 @@ class LanguageKeyboardService : InputMethodService(),
             if (active && buffer.isNotEmpty() && appliedGeneration != generation) View.VISIBLE else View.INVISIBLE
 
         typedText?.let { tv ->
-            val secondary = ContextCompat.getColor(this, R.color.strip_text_secondary)
-            val primary = ContextCompat.getColor(this, R.color.strip_text)
+            val secondary = ContextCompat.getColor(ui, R.color.strip_text_secondary)
+            val primary = ContextCompat.getColor(ui, R.color.strip_text)
             val message: String? = when {
                 fieldBlocked -> ui.getString(R.string.strip_no_translate_field)
                 !active && previewSource.isEmpty() ->
@@ -935,8 +944,8 @@ class LanguageKeyboardService : InputMethodService(),
                 else -> statusMessage
             }
             val marks = visibleMarks()
-            tv.cursorColor = ContextCompat.getColor(this, R.color.brand)
-            tv.markHighlightColor = ContextCompat.getColor(this, R.color.mark_selected)
+            tv.cursorColor = ContextCompat.getColor(ui, R.color.brand)
+            tv.markHighlightColor = ContextCompat.getColor(ui, R.color.mark_selected)
             if (active && buffer.isNotEmpty()) {
                 val text = SpannableStringBuilder(buffer)
                 tv.cursorOffset = cursor
@@ -1069,7 +1078,7 @@ class LanguageKeyboardService : InputMethodService(),
     }
 
     private fun markColor(kind: MarkKind) = ContextCompat.getColor(
-        this,
+        ui,
         when (kind) {
             // Like a word processor: red for spelling (accents included), blue for grammar.
             MarkKind.SPELLING, MarkKind.ACCENT -> R.color.mark_spelling
