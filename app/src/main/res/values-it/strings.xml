@@ -47,7 +47,7 @@
 
     <string name="section_checking">5. Controlla il mio %1$s</string>
     <string name="mark_mistakes">Segnala gli errori</string>
-    <string name="mark_mistakes_summary">Sottolinea con una linea ondulata rossa le parole scritte male e gli accenti mancanti nella barra di pratica. Tocca la parola per vedere la correzione. Trova anche alcuni errori di genere come «este es una» in spagnolo, portoghese e italiano (linea blu). Funziona offline.</string>
+    <string name="mark_mistakes_summary">Sottolinea con una linea ondulata rossa le parole scritte male e gli accenti mancanti nella barra di pratica. Tocca la parola per vedere la correzione. Trova anche alcuni errori di genere come «la problema» o «este es una» in spagnolo, portoghese e italiano (linea blu). Funziona offline.</string>
     <string name="grammar_check">Controllo grammaticale (online)</string>
     <string name="grammar_check_summary">Controlla anche la grammatica, come la concordanza di genere e le forme verbali (linea ondulata blu), e spiega ogni errore. Invia il testo della barra di pratica a LanguageTool (languagetool.org) quando fai una pausa. Gratuito, senza account. Viene inviato solo il tuo testo di pratica, non la traduzione.</string>
     <string name="grammar_unsupported">Il controllo grammaticale non è disponibile per %1$s.</string>
@@ -71,8 +71,15 @@
     <string name="mark_accent">\"%1$s\" ha bisogno di un accento: %2$s</string>
     <string name="marks_before_send">Ci sono possibili errori segnalati. Correggili o premi di nuovo ✓ per usare il testo così com\'è.</string>
     <string name="mark_no_fix">Nessun suggerimento. Tocca ✕ per lasciarlo così.</string>
-    <string name="agreement_noun">Usa «%2$s», non «%1$s»: «%3$s» è %4$s (lo si capisce dal «%5$s» davanti), e %6$s deve concordare con il nome a cui si riferisce.</string>
-    <string name="agreement_article">Usa «%2$s», non «%1$s»: «%3$s» indica che il nome che segue è %4$s, e %5$s deve concordare con il nome a cui si riferisce.</string>
     <string name="gender_feminine">femminile</string>
     <string name="gender_masculine">maschile</string>
+    <string name="reason_ending_always">«%1$s» è di genere %2$s: i nomi che finiscono in -%3$s sono sempre di genere %2$s</string>
+    <string name="reason_ending_usually">«%1$s» è di genere %2$s: i nomi che finiscono in -%3$s di solito sono di genere %2$s</string>
+    <string name="reason_exception">«%1$s» è di genere %2$s, anche se finisce in -%3$s (da ricordare)</string>
+    <string name="reason_listed">«%1$s» è di genere %2$s (da imparare con l’articolo: «%3$s»)</string>
+    <string name="reason_article">«%1$s» indica che il nome è di genere %2$s</string>
+    <string name="reason_stressed_a">«%1$s» è femminile, ma siccome comincia con una «a» tonica al singolare vuole «el» o «un» («el agua», ma «las aguas»)</string>
+    <string name="fix_demonstrative">Usa «%1$s», non «%2$s»: %3$s, e %4$s deve concordare con il nome a cui si riferisce.</string>
+    <string name="fix_article">Usa «%1$s», non «%2$s»: %3$s.</string>
+    <string name="not_a_noun">«%1$s» esiste, ma non è un nome. Dopo «%3$s» probabilmente intendi «%2$s».</string>
 </resources>

@@ -47,7 +47,7 @@
 
     <string name="section_checking">5. Revisar meu %1$s</string>
     <string name="mark_mistakes">Marcar erros</string>
-    <string name="mark_mistakes_summary">Sublinha com uma linha ondulada vermelha as palavras escritas errado e os acentos faltando na barra de prática. Toque na palavra para ver a correção. Também encontra alguns erros de gênero como “este es una” em espanhol, português e italiano (linha azul). Funciona offline.</string>
+    <string name="mark_mistakes_summary">Sublinha com uma linha ondulada vermelha as palavras escritas errado e os acentos faltando na barra de prática. Toque na palavra para ver a correção. Também encontra alguns erros de gênero como “la problema” ou “este es una” em espanhol, português e italiano (linha azul). Funciona offline.</string>
     <string name="grammar_check">Revisão gramatical (online)</string>
     <string name="grammar_check_summary">Também revisa a gramática, como a concordância de gênero e as formas verbais (linha ondulada azul), e explica cada erro. Envia o texto da barra de prática ao LanguageTool (languagetool.org) quando você faz uma pausa. Grátis, sem conta. Só o seu texto de prática é enviado, não a tradução.</string>
     <string name="grammar_unsupported">A revisão gramatical não está disponível para %1$s.</string>
@@ -71,8 +71,15 @@
     <string name="mark_accent">\"%1$s\" precisa de acento: %2$s</string>
     <string name="marks_before_send">Há possíveis erros marcados. Corrija-os ou aperte ✓ de novo para usar o texto como está.</string>
     <string name="mark_no_fix">Nenhuma sugestão. Toque em ✕ para deixar como está.</string>
-    <string name="agreement_noun">Use “%2$s”, não “%1$s”: “%3$s” é %4$s (dá para ver pelo “%5$s” antes), e %6$s tem que concordar com o substantivo a que se refere.</string>
-    <string name="agreement_article">Use “%2$s”, não “%1$s”: “%3$s” mostra que o substantivo seguinte é %4$s, e %5$s tem que concordar com o substantivo a que se refere.</string>
     <string name="gender_feminine">feminino</string>
     <string name="gender_masculine">masculino</string>
+    <string name="reason_ending_always">“%1$s” é do gênero %2$s: substantivos terminados em -%3$s são sempre do gênero %2$s</string>
+    <string name="reason_ending_usually">“%1$s” é do gênero %2$s: substantivos terminados em -%3$s costumam ser do gênero %2$s</string>
+    <string name="reason_exception">“%1$s” é do gênero %2$s, mesmo terminando em -%3$s (é para decorar)</string>
+    <string name="reason_listed">“%1$s” é do gênero %2$s (aprenda junto com o artigo: “%3$s”)</string>
+    <string name="reason_article">“%1$s” mostra que o substantivo é do gênero %2$s</string>
+    <string name="reason_stressed_a">“%1$s” é feminino, mas como começa com “a” tônico leva “el” ou “un” no singular (“el agua”, mas “las aguas”)</string>
+    <string name="fix_demonstrative">Use “%1$s”, não “%2$s”: %3$s, e %4$s tem que concordar com o substantivo a que se refere.</string>
+    <string name="fix_article">Use “%1$s”, não “%2$s”: %3$s.</string>
+    <string name="not_a_noun">“%1$s” existe, mas não é um substantivo. Depois de “%3$s” você provavelmente quer dizer “%2$s”.</string>
 </resources>

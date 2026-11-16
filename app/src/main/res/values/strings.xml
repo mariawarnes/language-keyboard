@@ -49,7 +49,7 @@
 
     <string name="section_checking">5. Checking my %1$s</string>
     <string name="mark_mistakes">Mark mistakes</string>
-    <string name="mark_mistakes_summary">Puts a red squiggly line under misspelt words and missing accents in the practice bar. Tap the word to see the fix. Also catches some gender mistakes like “este es una” in Spanish, Portuguese and Italian (blue line). Works offline.</string>
+    <string name="mark_mistakes_summary">Puts a red squiggly line under misspelt words and missing accents in the practice bar. Tap the word to see the fix. Also catches some gender mistakes like “la problema” or “este es una” in Spanish, Portuguese and Italian (blue line). Works offline.</string>
     <string name="grammar_check">Grammar check (online)</string>
     <string name="grammar_check_summary">Also checks grammar, like gender agreement and verb forms (blue squiggly line), and explains each mistake. Sends the text in the practice bar to LanguageTool (languagetool.org) when you pause typing. Free, no account. Only your practice text is sent, not the translation.</string>
     <string name="grammar_unsupported">Grammar check isn\'t available for %1$s.</string>
@@ -73,8 +73,15 @@
     <string name="mark_accent">\"%1$s\" needs an accent: %2$s</string>
     <string name="marks_before_send">Possible mistakes are marked. Fix them, or press ✓ again to use it as it is.</string>
     <string name="mark_no_fix">No suggestion. Tap ✕ to leave it.</string>
-    <string name="agreement_noun">Use “%2$s”, not “%1$s”: “%3$s” is %4$s (you can tell from “%5$s” in front of it), and %6$s has to match the noun it’s about.</string>
-    <string name="agreement_article">Use “%2$s”, not “%1$s”: “%3$s” shows the noun after it is %4$s, and %5$s has to match the noun it’s about.</string>
     <string name="gender_feminine">feminine</string>
     <string name="gender_masculine">masculine</string>
+    <string name="reason_ending_always">“%1$s” is %2$s: nouns ending in -%3$s are always %2$s</string>
+    <string name="reason_ending_usually">“%1$s” is %2$s: nouns ending in -%3$s are usually %2$s</string>
+    <string name="reason_exception">“%1$s” is %2$s, even though it ends in -%3$s (one to remember)</string>
+    <string name="reason_listed">“%1$s” is %2$s (one to learn with its article: “%3$s”)</string>
+    <string name="reason_article">“%1$s” shows the noun is %2$s</string>
+    <string name="reason_stressed_a">“%1$s” is feminine, but because it starts with a stressed “a” it takes “el” or “un” in the singular (“el agua”, but “las aguas”)</string>
+    <string name="fix_demonstrative">Use “%1$s”, not “%2$s”: %3$s, and %4$s has to match the noun it’s about.</string>
+    <string name="fix_article">Use “%1$s”, not “%2$s”: %3$s.</string>
+    <string name="not_a_noun">“%1$s” is a real word, but not a noun. After “%3$s” you probably mean “%2$s”.</string>
 </resources>

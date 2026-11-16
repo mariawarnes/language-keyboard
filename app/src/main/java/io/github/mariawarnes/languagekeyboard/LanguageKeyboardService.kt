@@ -1070,13 +1070,24 @@ class LanguageKeyboardService : InputMethodService(),
         },
     )
 
-    /** "Use “esta”, not “este”: “prueba” is feminine (you can tell from “una”…)", in your language. */
+    /**
+     * Explains an agreement mistake in your language, including how the gender is known:
+     * "Use “la”, not “el”: “ciudad” is feminine: nouns ending in -dad are always feminine."
+     */
     private fun agreementExplanation(hit: Agreement.Hit): String {
         val gender = ui.getString(if (hit.feminine) R.string.gender_feminine else R.string.gender_masculine)
-        return if (hit.noun != null) {
-            ui.getString(R.string.agreement_noun, hit.word, hit.fix, hit.noun, gender, hit.article, hit.pair)
-        } else {
-            ui.getString(R.string.agreement_article, hit.word, hit.fix, hit.article, gender, hit.pair)
+        val why = when (hit.reason) {
+            Agreement.Reason.ENDING_ALWAYS -> ui.getString(R.string.reason_ending_always, hit.evidence, gender, hit.ending)
+            Agreement.Reason.ENDING_USUALLY -> ui.getString(R.string.reason_ending_usually, hit.evidence, gender, hit.ending)
+            Agreement.Reason.EXCEPTION -> ui.getString(R.string.reason_exception, hit.evidence, gender, hit.ending)
+            Agreement.Reason.LISTED -> ui.getString(R.string.reason_listed, hit.evidence, gender, hit.withArticle)
+            Agreement.Reason.ARTICLE -> ui.getString(R.string.reason_article, hit.evidence, gender)
+            Agreement.Reason.STRESSED_A -> ui.getString(R.string.reason_stressed_a, hit.evidence)
+        }
+        return when (hit.kind) {
+            Agreement.Kind.DEMONSTRATIVE -> ui.getString(R.string.fix_demonstrative, hit.fix, hit.word, why, hit.pair)
+            Agreement.Kind.ARTICLE -> ui.getString(R.string.fix_article, hit.fix, hit.word, why)
+            Agreement.Kind.NOT_A_NOUN -> ui.getString(R.string.not_a_noun, hit.word, hit.fix, hit.determiner)
         }
     }
 
@@ -1091,8 +1102,11 @@ class LanguageKeyboardService : InputMethodService(),
         val language = Prefs.typingLanguage(this)
         val agreement = if (markMistakes && Agreement.isSupported(language)) {
             Agreement.check(text, language)
-                .filter { cursor != it.checkedUpTo } // that article may still be being typed
-                .map { Mark(it.start, it.end, it.word, MarkKind.GRAMMAR, agreementExplanation(it), listOf(it.fix)) }
+                .filter { cursor != it.checkedUpTo } // that word may still be being typed
+                .map {
+                    val kind = if (it.kind == Agreement.Kind.NOT_A_NOUN) MarkKind.SPELLING else MarkKind.GRAMMAR
+                    Mark(it.start, it.end, it.word, kind, agreementExplanation(it), listOf(it.fix))
+                }
                 .filter { free(it, words) }
         } else {
             emptyList()
