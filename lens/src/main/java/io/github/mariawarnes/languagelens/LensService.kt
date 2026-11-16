@@ -1,17 +1,23 @@
 package io.github.mariawarnes.languagelens
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
 import android.content.SharedPreferences
+import android.graphics.Path
+import android.graphics.PointF
 import android.graphics.Rect
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
 
 /**
- * Language Lens. Only WhatsApp and Messenger send it events (see res/xml/lens_service.xml), and
- * it only reads the messages on screen there, to translate them on the phone. Nothing it reads is
- * stored or sent anywhere.
+ * Language Lens. Reads text only in WhatsApp and Messenger (the apps switched on in settings), to
+ * translate it on the phone. For any other app it only checks which app is in front, so it can
+ * hide its translations the moment you switch away. Nothing it reads is stored or sent anywhere.
  */
 class LensService : AccessibilityService(), SharedPreferences.OnSharedPreferenceChangeListener {
 
@@ -21,7 +27,7 @@ class LensService : AccessibilityService(), SharedPreferences.OnSharedPreference
 
     private val refresh = Runnable { refreshNow() }
 
-    /** While labels are up, check now and then that the chat app is still in front. */
+    /** Backup check while labels are up, in case an app switch sends no event. */
     private val watch = object : Runnable {
         override fun run() {
             if (!overlay.isShowing) return
@@ -31,7 +37,7 @@ class LensService : AccessibilityService(), SharedPreferences.OnSharedPreference
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        overlay = LensOverlay(this)
+        overlay = LensOverlay(this, DragReplay())
         translator = LensTranslator { schedule(0) }
         LensPrefs.get(this).registerOnSharedPreferenceChangeListener(this)
         configure()
@@ -47,21 +53,51 @@ class LensService : AccessibilityService(), SharedPreferences.OnSharedPreference
         schedule(0)
     }
 
+    /** Snapshot of the real windows (not our labels), to tell real changes from our own. */
+    private var lastWindows = ""
+
+    private fun windowSnapshot(): String {
+        val r = Rect()
+        return windows.filter { it.type != AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY }
+            .joinToString("|") { w ->
+                w.getBoundsInScreen(r)
+                "${w.id}:${w.type}:${w.isActive}:${r.flattenToString()}"
+            }
+    }
+
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        if (!::overlay.isInitialized) return
+        if (event.packageName?.toString() == packageName) return // our own labels
         if (LensPrefs.paused(this)) {
             overlay.clear()
             return
         }
-        val pkg = event.packageName?.toString() ?: return
-        if (pkg !in LensPrefs.packages(this)) {
-            overlay.clear()
-            return
-        }
-        if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
-            overlay.setVisible(false) // back once scrolling stops
-            schedule(SCROLL_SETTLE_MS)
-        } else {
-            schedule(CHANGE_SETTLE_MS)
+        when (event.eventType) {
+            // Something moved in front or behind (app switch, recents, home, notification shade,
+            // keyboard…): hide straight away, then put labels back if the chat is still in front.
+            AccessibilityEvent.TYPE_WINDOWS_CHANGED, AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                if (!chatAppInFront()) {
+                    overlay.clear()
+                    lastWindows = ""
+                    return
+                }
+                val snapshot = windowSnapshot()
+                if (snapshot == lastWindows) return // only our labels changed
+                lastWindows = snapshot
+                overlay.setVisible(false)
+                schedule(WINDOW_SETTLE_MS)
+            }
+            else -> {
+                // Content changes are only looked at for the chat apps; everything else is ignored.
+                val pkg = event.packageName?.toString() ?: return
+                if (pkg !in LensPrefs.packages(this)) return
+                if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
+                    overlay.setVisible(false) // back once scrolling stops
+                    schedule(SCROLL_SETTLE_MS)
+                } else {
+                    schedule(CHANGE_SETTLE_MS)
+                }
+            }
         }
     }
 
@@ -70,6 +106,7 @@ class LensService : AccessibilityService(), SharedPreferences.OnSharedPreference
         handler.postDelayed(refresh, delay)
     }
 
+    /** True when the window you're using belongs to WhatsApp / Messenger. */
     private fun chatAppInFront(): Boolean {
         val pkg = rootInActiveWindow?.packageName?.toString() ?: return false
         return pkg in LensPrefs.packages(this)
@@ -115,6 +152,87 @@ class LensService : AccessibilityService(), SharedPreferences.OnSharedPreference
         }
     }
 
+    /**
+     * Replays a drag that started on a translation as a touch gesture on the chat, piece by piece
+     * as the finger moves, so the chat scrolls along with it (and flings at the end).
+     */
+    private inner class DragReplay : LensOverlay.DragListener {
+        private var stroke: GestureDescription.StrokeDescription? = null
+        private val pending = ArrayList<PointF>()
+        private var last = PointF()
+        private var lastTime = 0L
+        private var busy = false
+        private var ending = false
+
+        override fun dragStart(fromX: Float, fromY: Float, x: Float, y: Float) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return // continued strokes need Android 8
+            stroke = null
+            pending.clear()
+            last = PointF(fromX, fromY)
+            lastTime = SystemClock.uptimeMillis()
+            busy = false
+            ending = false
+            add(x, y)
+            pump()
+        }
+
+        override fun dragMove(x: Float, y: Float) {
+            add(x, y)
+            pump()
+        }
+
+        override fun dragEnd(x: Float, y: Float) {
+            add(x, y)
+            ending = true
+            pump()
+            schedule(SCROLL_SETTLE_MS * 2) // labels come back after the fling
+        }
+
+        private fun add(x: Float, y: Float) {
+            val prev = pending.lastOrNull() ?: last
+            if (prev.x != x || prev.y != y) pending += PointF(x, y)
+        }
+
+        private fun pump() {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || busy) return
+            if (pending.isEmpty() && !ending) return
+            val path = Path().apply {
+                moveTo(last.x, last.y)
+                if (pending.isEmpty()) lineTo(last.x, last.y + 0.1f) // a stroke needs some length
+                pending.forEach { lineTo(it.x, it.y) }
+            }
+            val end = pending.lastOrNull() ?: last
+            pending.clear()
+            val now = SystemClock.uptimeMillis()
+            val duration = (now - lastTime).coerceIn(8L, 120L)
+            lastTime = now
+            val final = ending
+            val next = stroke?.continueStroke(path, 0, duration, !final)
+                ?: GestureDescription.StrokeDescription(path, 0, duration, !final)
+            stroke = if (final) null else next
+            last = end
+            busy = true
+            dispatchGesture(
+                GestureDescription.Builder().addStroke(next).build(),
+                object : AccessibilityService.GestureResultCallback() {
+                    override fun onCompleted(gestureDescription: GestureDescription?) {
+                        busy = false
+                        if (!final) pump()
+                    }
+
+                    override fun onCancelled(gestureDescription: GestureDescription?) {
+                        busy = false
+                        stroke = null
+                        pending.clear()
+                        ending = false
+                    }
+                },
+                null,
+            )
+            if (final) ending = false
+        }
+    }
+
     override fun onInterrupt() {
         if (::overlay.isInitialized) overlay.clear()
     }
@@ -130,7 +248,8 @@ class LensService : AccessibilityService(), SharedPreferences.OnSharedPreference
     private companion object {
         const val CHANGE_SETTLE_MS = 150L
         const val SCROLL_SETTLE_MS = 250L
-        const val WATCH_MS = 700L
+        const val WINDOW_SETTLE_MS = 300L
+        const val WATCH_MS = 500L
         const val MAX_LABELS = 30
     }
 }

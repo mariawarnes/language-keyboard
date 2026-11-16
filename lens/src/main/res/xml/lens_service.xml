@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only WhatsApp (and WhatsApp Business) and Messenger (and Messenger Lite) send events here. -->
+<!--
+  Events from all apps arrive so the Lens can tell the moment you leave WhatsApp / Messenger and
+  hide its translations (e.g. when you swipe up to change apps). It only reads text inside
+  WhatsApp and Messenger (checked in LensService); for every other app it only looks at which app
+  is in front. canPerformGestures lets a drag that starts on a translation still scroll the chat.
+-->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowContentChanged|typeViewScrolled|typeWindowStateChanged"
+    android:accessibilityEventTypes="typeWindowContentChanged|typeViewScrolled|typeWindowStateChanged|typeWindowsChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagIncludeNotImportantViews"
+    android:accessibilityFlags="flagIncludeNotImportantViews|flagRetrieveInteractiveWindows"
+    android:canPerformGestures="true"
     android:canRetrieveWindowContent="true"
     android:description="@string/service_description"
     android:isAccessibilityTool="false"
-    android:notificationTimeout="100"
-    android:packageNames="com.whatsapp,com.whatsapp.w4b,com.facebook.orca,com.facebook.mlite" />
+    android:notificationTimeout="100" />

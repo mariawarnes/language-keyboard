@@ -1,25 +1,35 @@
 package io.github.mariawarnes.languagelens
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
 import android.view.Gravity
-import android.view.View
+import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.widget.TextViewCompat
+import kotlin.math.hypot
 
 /**
  * Draws the translations over the messages. Each message gets its own small overlay window, so
  * touches anywhere else go straight through to WhatsApp / Messenger.
  *
- * Tap a message to see the original, tap again for the translation; long-press to do that for
- * every message on screen.
+ * Tap a translation to see the original, tap again for the translation. A drag that starts on a
+ * translation is handed to [drags], which replays it on the chat so it still scrolls.
  */
-class LensOverlay(private val context: Context) {
+class LensOverlay(private val context: Context, private val drags: DragListener) {
+
+    /** Receives drags (screen coordinates) that should scroll the app underneath. */
+    interface DragListener {
+        fun dragStart(fromX: Float, fromY: Float, x: Float, y: Float)
+        fun dragMove(x: Float, y: Float)
+        fun dragEnd(x: Float, y: Float)
+    }
 
     class Item(val original: String, val translation: String, val bounds: Rect)
 
@@ -31,10 +41,11 @@ class LensOverlay(private val context: Context) {
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val labels = ArrayList<Label>()
     private val revealed = HashSet<String>()
-    private var revealAll = false
     private var visible = true
+    private var touchable = true
 
     private val density = context.resources.displayMetrics.density
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
 
     fun show(items: List<Item>) {
         // Reuse windows where we can; add or remove the rest.
@@ -52,17 +63,36 @@ class LensOverlay(private val context: Context) {
                 p.y = item.bounds.top
                 p.width = item.bounds.width()
                 p.height = item.bounds.height()
-                windowManager.updateViewLayout(label.view, p)
+                update(label)
             }
         }
+        setTouchable(true)
         setVisible(true)
     }
 
-    /** While scrolling, the labels hide (they'd lag behind) and come back when it stops. */
+    /** While scrolling or switching apps the labels hide (they'd be out of place) and come back after. */
     fun setVisible(show: Boolean) {
         if (visible == show) return
         visible = show
-        for (l in labels) l.view.visibility = if (show) View.VISIBLE else View.INVISIBLE
+        for (l in labels) l.view.alpha = if (show) 1f else 0f
+    }
+
+    /**
+     * Off while a drag is being replayed, so the replayed touches reach the app, not the labels.
+     * The label under the finger is left alone ([keep]): changing it mid-drag could cancel the drag.
+     */
+    private fun setTouchable(on: Boolean, keep: Label? = null) {
+        if (touchable == on) return
+        touchable = on
+        for (l in labels) {
+            if (l === keep) continue
+            l.params.flags = if (on) {
+                l.params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+            } else {
+                l.params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            }
+            update(l)
+        }
     }
 
     fun clear() {
@@ -72,6 +102,7 @@ class LensOverlay(private val context: Context) {
 
     val isShowing: Boolean get() = labels.isNotEmpty()
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun create(): Label {
         val view = TextView(context).apply {
             val pad = (4 * density).toInt()
@@ -88,22 +119,64 @@ class LensOverlay(private val context: Context) {
             PixelFormat.TRANSLUCENT,
         ).apply { gravity = Gravity.TOP or Gravity.START }
         val label = Label(view, params)
-        view.setOnClickListener {
-            if (!revealed.add(label.original)) revealed.remove(label.original)
-            style(label)
-        }
-        view.setOnLongClickListener {
-            revealAll = !revealAll
-            revealed.clear()
-            labels.forEach { style(it) }
+
+        // Tap = flip this message; drag = scroll the chat underneath. The drag is replayed in the
+        // gap beside this label (not under it, or it would land on the label itself), towards the
+        // middle of the screen and away from the edges where the system back gesture lives.
+        var downX = 0f
+        var downY = 0f
+        var dragging = false
+        var replayX = 0f
+        view.setOnTouchListener { _, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    downX = e.rawX
+                    downY = e.rawY
+                    dragging = false
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (!dragging && hypot(e.rawX - downX, e.rawY - downY) > touchSlop) {
+                        dragging = true
+                        setVisible(false)
+                        setTouchable(false, keep = label)
+                        val screen = context.resources.displayMetrics.widthPixels
+                        val gapLeft = label.params.x.toFloat()
+                        val gapRight = (screen - label.params.x - label.params.width).toFloat()
+                        val reach = 24 * density
+                        replayX = if (gapRight >= gapLeft) {
+                            label.params.x + label.params.width + minOf(gapRight / 2, reach)
+                        } else {
+                            label.params.x - minOf(gapLeft / 2, reach)
+                        }
+                        drags.dragStart(replayX, downY, replayX, e.rawY)
+                    } else if (dragging) {
+                        drags.dragMove(replayX, e.rawY)
+                    }
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (dragging) {
+                        drags.dragEnd(replayX, e.rawY)
+                    } else {
+                        if (!revealed.add(label.original)) revealed.remove(label.original)
+                        style(label)
+                    }
+                    dragging = false
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    if (dragging) drags.dragEnd(replayX, e.rawY)
+                    dragging = false
+                }
+            }
             true
         }
+        params.flags = if (touchable) params.flags else params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        view.alpha = if (visible) 1f else 0f
         windowManager.addView(view, params)
         return label
     }
 
     private fun style(label: Label) {
-        val showOriginal = revealAll != (label.original in revealed)
+        val showOriginal = label.original in revealed
         label.view.text = if (showOriginal) label.original else label.translation
         label.view.setTextColor(color(if (showOriginal) R.color.lens_original_text else R.color.lens_text))
         label.view.background = GradientDrawable().apply {
@@ -114,6 +187,14 @@ class LensOverlay(private val context: Context) {
     }
 
     private fun color(id: Int) = ContextCompat.getColor(context, id)
+
+    private fun update(label: Label) {
+        try {
+            windowManager.updateViewLayout(label.view, label.params)
+        } catch (e: IllegalArgumentException) {
+            // window already gone
+        }
+    }
 
     private fun remove(label: Label) {
         try {

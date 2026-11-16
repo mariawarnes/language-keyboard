@@ -5,7 +5,7 @@
     <string name="tile_label">Language Lens</string>
     <string name="service_description">Shows messages in WhatsApp and Messenger in the language you\'re learning, right over the original. Tap a message to see the original. Translation happens on your phone: messages are never stored or sent anywhere.</string>
 
-    <string name="intro">Messages in your language show up in the language you\'re learning, right where they are in WhatsApp and Messenger. Tap a message to peek at the original; tap again to go back. Long-press to show or hide all originals.</string>
+    <string name="intro">Messages in your language show up in the language you\'re learning, right where they are in WhatsApp and Messenger. Tap a message to peek at the original; tap again to go back. To see every original at once, pause Language Lens with its quick settings tile.</string>
 
     <string name="section_languages">1. Your languages</string>
     <string name="label_learning">Language I\'m learning (messages are shown in it)</string>
@@ -30,5 +30,5 @@
     <string name="paused_summary">Also on the quick settings tile, so you can pause it from anywhere.</string>
 
     <string name="section_privacy">Privacy</string>
-    <string name="privacy">Language Lens only looks at WhatsApp and Messenger, and only at the messages on screen. It translates them on your phone with Google\'s ML Kit; the text is never stored, logged or sent anywhere. The only internet use is downloading language packs. Android shows a warning when you turn it on because Accessibility apps can read the screen.</string>
+    <string name="privacy">Language Lens only reads text in WhatsApp and Messenger, and only the messages on screen. For other apps it only notices that you\'ve switched away, so it can hide its translations. It translates them on your phone with Google\'s ML Kit; the text is never stored, logged or sent anywhere. The only internet use is downloading language packs. Android shows a warning when you turn it on because Accessibility apps can read the screen.</string>
 </resources>

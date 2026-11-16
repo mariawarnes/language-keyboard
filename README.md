@@ -61,10 +61,11 @@ text box receives the **translation into your own language**, updated live as yo
 
 **Language Lens** shows the messages you receive in WhatsApp and Messenger in the language you're learning,
 right on top of the originals — no copying or tapping needed. Tap a message to peek at the original, tap again to
-go back; long-press to show or hide every original on screen. A quick-settings tile pauses it.
+go back; scrolling works as normal, even starting on a translation. The quick-settings tile pauses it (showing every
+original); it hides as soon as you switch apps.
 
-- It's an Android Accessibility service limited to WhatsApp (and WhatsApp Business) and Messenger (and
-  Messenger Lite). Language detection and translation run on the phone with ML Kit; messages are never stored,
+- It's an Android Accessibility service that reads text only in WhatsApp (and WhatsApp Business) and Messenger
+  (and Messenger Lite); for other apps it only notices that you've switched away, so it can hide. Language detection and translation run on the phone with ML Kit; messages are never stored,
   logged or sent anywhere. The only internet use is the one-time language-pack download.
 - It's a separate app from the keyboard so each only has the permissions it needs.
 - Because it's installed outside the Play Store, Android 13+ asks you to allow it first: *App info → ⋮ → Allow
