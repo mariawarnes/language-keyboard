@@ -89,6 +89,9 @@ class LanguageKeyboardService : InputMethodService(),
     /** Where in [buffer] typing goes (slide on the space bar, or tap the practice bar, to move it). */
     private var cursor = 0
 
+    /** True right after an edit: the word at the cursor may still be being typed. False once you tap or move the cursor. */
+    private var editingAtCursor = false
+
     /** Bumped whenever the current phrase is finished or abandoned, so late results are ignored. */
     private var session = 0
 
@@ -668,7 +671,9 @@ class LanguageKeyboardService : InputMethodService(),
 
     // --- Translation ------------------------------------------------------------------------
 
-    private fun onBufferChanged() {
+    /** [typing]: false for a fix you picked, which is a finished word, not one being typed. */
+    private fun onBufferChanged(typing: Boolean = true) {
+        editingAtCursor = typing
         generation++
         statusMessage = null
         warnedBeforeLockIn = false
@@ -1004,6 +1009,7 @@ class LanguageKeyboardService : InputMethodService(),
             }
             if (target == cursor) return false
             cursor = target
+            editingAtCursor = false
             lastResult = null
             updateAutoShift()
             refreshUi()
@@ -1029,6 +1035,7 @@ class LanguageKeyboardService : InputMethodService(),
         val tv = v as TextView
         val layout = tv.layout ?: return true
         val offset = layout.getOffsetForHorizontal(0, event.x - tv.totalPaddingLeft).coerceIn(0, buffer.length)
+        editingAtCursor = false
         selectedMark = visibleMarks().firstOrNull { offset in it.start..it.end }
         cursor = selectedMark?.end ?: offset
         gestureWords = null
@@ -1102,7 +1109,7 @@ class LanguageKeyboardService : InputMethodService(),
         val language = Prefs.typingLanguage(this)
         val agreement = if (markMistakes && Agreement.isSupported(language)) {
             Agreement.check(text, language)
-                .filter { cursor != it.checkedUpTo } // that word may still be being typed
+                .filter { !(editingAtCursor && cursor == it.checkedUpTo) } // that word may still be being typed
                 .map {
                     val kind = if (it.kind == Agreement.Kind.NOT_A_NOUN) MarkKind.SPELLING else MarkKind.GRAMMAR
                     Mark(it.start, it.end, it.word, kind, agreementExplanation(it), listOf(it.fix))
@@ -1267,7 +1274,7 @@ class LanguageKeyboardService : InputMethodService(),
         gestureWords = null
         undoAutocorrect = null
         autoSpaced = false
-        onBufferChanged()
+        onBufferChanged(typing = false)
     }
 
     // --- Suggestions, autocorrect, gesture typing -------------------------------------------
