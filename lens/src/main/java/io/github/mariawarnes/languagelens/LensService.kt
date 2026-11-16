@@ -136,8 +136,12 @@ class LensService : AccessibilityService(), SharedPreferences.OnSharedPreference
     /** Visible, non-editable text on screen (the message bubbles), with where it is. */
     private fun collect(node: AccessibilityNodeInfo, out: MutableList<Pair<String, Rect>>, depth: Int) {
         if (depth > 40 || !node.isVisibleToUser || node.isEditable) return
+        // Message text. Descriptions are only used for plain views with no text (some apps describe
+        // messages that way); buttons and icons ("Emojis, GIFs and stickers") are never translated.
+        val className = node.className?.toString().orEmpty()
+        val isControl = "Button" in className || "Image" in className || node.isCheckable
         val text = node.text?.toString()
-            ?: node.contentDescription?.toString()?.takeIf { node.childCount == 0 }
+            ?: node.contentDescription?.toString()?.takeIf { node.childCount == 0 && !isControl }
         if (text != null && TextFilter.worthTranslating(text)) {
             val bounds = Rect()
             node.getBoundsInScreen(bounds)

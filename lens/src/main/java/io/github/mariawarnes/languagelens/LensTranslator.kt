@@ -15,7 +15,8 @@ import com.google.mlkit.nl.translate.TranslatorOptions
 class LensTranslator(private val onUpdated: () -> Unit) {
 
     private val identifier = LanguageIdentification.getClient(
-        LanguageIdentificationOptions.Builder().setConfidenceThreshold(0.5f).build(),
+        // Low threshold: we want every guess with its confidence, and decide ourselves (see lookup).
+        LanguageIdentificationOptions.Builder().setConfidenceThreshold(0.01f).build(),
     )
     private var translator: Translator? = null
     private var native = ""
@@ -56,19 +57,29 @@ class LensTranslator(private val onUpdated: () -> Unit) {
         if (!ready || text in pending) return null
         pending += text
         val client = translator ?: return null
-        identifier.identifyLanguage(text)
-            .addOnSuccessListener { language ->
-                // "en", "es", "zh-Latn", … ; "und" when it can't tell.
-                if (language.substringBefore('-') != native) {
+        identifier.identifyPossibleLanguages(text)
+            .addOnSuccessListener { guesses ->
+                // Tags like "en", "es", "zh-Latn"; "und" when it can't tell.
+                fun confidence(code: String) =
+                    guesses.filter { it.languageTag.substringBefore('-') == code }.maxOfOrNull { it.confidence } ?: 0f
+                val mine = confidence(native)
+                val top = guesses.maxByOrNull { it.confidence }
+                val topCode = top?.languageTag?.substringBefore('-')
+                val clearlyOther = top != null && topCode != "und" && topCode != native &&
+                    top.confidence >= OTHER_SURE && mine < MINE_POSSIBLE
+                if (clearlyOther) {
+                    // Already in the language you're learning, or a third language: leave it.
                     cache.put(text, SKIP)
                     pending -= text
                     return@addOnSuccessListener
                 }
+                // In your language, or too short to tell ("Super busy"): translate, and if nothing
+                // changes it was already in the language you're learning.
                 client.translate(text)
                     .addOnSuccessListener { translated ->
                         pending -= text
                         if (translator !== client) return@addOnSuccessListener
-                        cache.put(text, translated)
+                        cache.put(text, if (same(translated, text)) SKIP else translated)
                         onUpdated()
                     }
                     .addOnFailureListener { pending -= text }
@@ -83,7 +94,18 @@ class LensTranslator(private val onUpdated: () -> Unit) {
         identifier.close()
     }
 
+    private fun same(a: String, b: String): Boolean {
+        fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
+        return norm(a) == norm(b)
+    }
+
     private companion object {
         val SKIP = String(charArrayOf('\u0000'))
+
+        /** Skip a message only when detection is at least this sure it's another language… */
+        const val OTHER_SURE = 0.5f
+
+        /** …and gives your language less than this. */
+        const val MINE_POSSIBLE = 0.2f
     }
 }
